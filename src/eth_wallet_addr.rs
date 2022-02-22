@@ -1,0 +1,47 @@
+/// Trait for canonicalizing Ethereum wallet address, which are used to blockies input
+pub trait EthWalletAddr {
+    fn addr_as_ref(&self) -> &str;
+
+    /// Convert given wallet address string to match the following format:  
+    /// * `0x(wallet_addr_hex_ascii_lowercase)`
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use eth_blockies::*;
+    ///
+    /// // "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+    /// // -> "0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc"
+    /// let addr_1 = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC".addr_canonicalize();
+    ///
+    /// // "e686c14ff9c11038f2b1c9ad617f2346cfb817dc"
+    /// // -> "0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc"
+    /// let addr_2 = String::from("e686c14ff9c11038f2b1c9ad617f2346cfb817dc").addr_canonicalize();
+    ///
+    /// assert_eq!(addr_1, addr_2);
+    /// ```
+    fn addr_canonicalize(&self) -> String {
+        format!(
+            "0x{}",
+            self.addr_as_ref()
+                .trim_start_matches("0x")
+                .to_ascii_lowercase()
+        )
+    }
+}
+
+impl EthWalletAddr for String {
+    fn addr_as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+impl EthWalletAddr for &String {
+    fn addr_as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+impl EthWalletAddr for &str {
+    fn addr_as_ref(&self) -> &str {
+        self
+    }
+}

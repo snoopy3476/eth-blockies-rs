@@ -1,0 +1,15 @@
+[package]
+name = "eth-blockies"
+version = "0.1.0"
+edition = "2021"
+
+# for bencher
+
+[dev-dependencies]
+bencher = "0.1.5"
+wasm-bindgen-test = "0.3.29"
+
+[[bench]]
+name = "bufchrbench"
+harness = false
+path = "benches/bench.rs"
