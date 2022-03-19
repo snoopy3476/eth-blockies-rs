@@ -1,5 +1,5 @@
-use std::convert::TryFrom;
-use std::ops::{Index, IndexMut};
+use core::convert::TryFrom;
+use core::ops::{Index, IndexMut};
 
 /// Type of color in Ethereum blockies
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
@@ -32,7 +32,7 @@ impl TryFrom<u8> for ColorClass {
 
     fn try_from(raw_value: u8) -> Result<Self, Self::Error> {
         match raw_value {
-            0..=2 => Ok(unsafe { std::mem::transmute::<_, ColorClass>(raw_value) }),
+            0..=2 => Ok(unsafe { core::mem::transmute::<_, ColorClass>(raw_value) }),
             _ => Err(()),
         }
     }

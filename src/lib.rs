@@ -15,11 +15,69 @@
 //!
 //! // "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
 //! // -> "0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc"
-//! let addr = String::from("0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC").addr_canonicalize();
+//! let addr =
+//!     "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC".to_owned()
+//!     .addr_canonicalize();
 //! assert_eq!(addr, "0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc");
 //!
 //! let blockies_data = eth_blockies_data(addr);
 //! ```
+//!
+//! * Get a raw blockies data
+//! ```
+//! use eth_blockies::*;
+//!
+//! let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+//!      .addr_canonicalize();
+//!
+//!
+//! // get 2D array of (r, g, b)
+//! {
+//!     let blockies_data_rgb = eth_blockies_data(&addr);
+//! }
+//!
+//!
+//! // get 2D array of grayscale
+//! {
+//!     fn rgb_to_grayscale((r, g, b): RgbPixel) -> u8 {
+//!         (r as f64 * 0.299 + g as f64 * 0.587 + b as f64 * 0.114)
+//!             as u8
+//!     }
+//!
+//!     let blockies_data_grayscale =
+//!         eth_blockies_data_mapped(&addr, rgb_to_grayscale);
+//! }
+//!
+//!
+//! // get (color palette, palette index of each pixel)
+//! {
+//!     let (color_palette, palette_idx_bitmap) =
+//!         eth_blockies_indexed_data(&addr);
+//! }
+//! ```
+//!
+//!
+//!
+//! * Write a generated blockies to png file `text.png`,
+//!   on Rust binary/library target
+//! ```
+//! use eth_blockies::*;
+//!
+//! let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+//!      .addr_canonicalize();
+//! let dimension = (128, 128);
+//! let img_png_data = eth_blockies_png_data(addr, dimension);
+//!
+//! use std::io::Write;
+//! std::fs::File::create("test.png").unwrap()
+//!     .write_all(&img_png_data);
+//! ```
+//!
+//!
+
+#![no_std]
+extern crate alloc;
+use alloc::vec::Vec;
 
 mod colorclass;
 pub use colorclass::{ColorClass, ColorClassArrayMap};
@@ -63,6 +121,14 @@ pub type Palette = ColorClassArrayMap<RgbPixel>;
 ///
 /// * 2D array of [`RgbPixel`]
 ///
+/// # Example
+/// ```
+/// use eth_blockies::*;
+/// let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+///     .addr_canonicalize();
+/// let blockies_data_rgb = eth_blockies_data(addr);
+/// ```
+///
 #[allow(dead_code)]
 pub fn eth_blockies_data<W: EthWalletAddr>(wallet_addr: W) -> EthBlockies<RgbPixel> {
     eth_blockies_data_mapped(wallet_addr, |rgb_pixel| rgb_pixel)
@@ -83,6 +149,19 @@ pub fn eth_blockies_data<W: EthWalletAddr>(wallet_addr: W) -> EthBlockies<RgbPix
 ///
 /// * 2D array of `T`, which is returned by `map_fn`
 ///
+/// # Example
+/// ```
+/// use eth_blockies::*;
+///
+/// fn rgb_to_grayscale((r, g, b): RgbPixel) -> u8 {
+///     (r as f64 * 0.299 + g as f64 * 0.587 + b as f64 * 0.114) as u8
+/// }
+///
+/// let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+///     .addr_canonicalize();
+/// let blockies_data_grayscale = eth_blockies_data_mapped(addr, rgb_to_grayscale);
+/// ```
+///
 #[allow(dead_code)]
 pub fn eth_blockies_data_mapped<W: EthWalletAddr, T: Clone, F: Fn(RgbPixel) -> T>(
     wallet_addr: W,
@@ -90,7 +169,7 @@ pub fn eth_blockies_data_mapped<W: EthWalletAddr, T: Clone, F: Fn(RgbPixel) -> T
 ) -> EthBlockies<T> {
     let (palette, class_bitmap) = eth_blockies_indexed_data(wallet_addr);
 
-    let mut ret_bitmap: EthBlockies<T> = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
+    let mut ret_bitmap: EthBlockies<T> = unsafe { core::mem::MaybeUninit::uninit().assume_init() };
     ret_bitmap
         .iter_mut()
         .zip(class_bitmap)
@@ -116,13 +195,21 @@ pub fn eth_blockies_data_mapped<W: EthWalletAddr, T: Clone, F: Fn(RgbPixel) -> T
 ///
 /// * A tuple of [(](tuple) `Array of colors`, `2D array of color indices` [)](tuple)
 ///
+/// # Example
+/// ```
+/// use eth_blockies::*;
+/// let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+///     .addr_canonicalize();
+/// let (color_palette, palette_idx_bitmap) = eth_blockies_indexed_data(addr);
+/// ```
+///
 #[allow(dead_code)]
 pub fn eth_blockies_indexed_data<W: EthWalletAddr>(
     wallet_addr: W,
 ) -> (Palette, EthBlockies<ColorClass>) {
     let mut keygen = BlockiesGenerator::new(wallet_addr.addr_as_ref().as_bytes());
 
-    let mut palette: Palette = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
+    let mut palette: Palette = unsafe { core::mem::MaybeUninit::uninit().assume_init() };
     [
         ColorClass::Color,
         ColorClass::BgColor,
@@ -132,7 +219,7 @@ pub fn eth_blockies_indexed_data<W: EthWalletAddr>(
     .for_each(|class| palette[class] = keygen.next_rgb());
 
     let mut bitmap: EthBlockies<ColorClass> =
-        unsafe { std::mem::MaybeUninit::uninit().assume_init() };
+        unsafe { core::mem::MaybeUninit::uninit().assume_init() };
     bitmap
         .iter_mut()
         .map(|row| (row.len() / 2, row))
@@ -309,7 +396,7 @@ impl BlockiesGenerator {
         }
 
         hsl_to_rgb(
-            (self.next_key() * 360_f64).floor() as u32,
+            (self.next_key() * 360_f64) as u32,
             self.next_key() * 0.6_f64 + 0.4_f64,
             (self.next_key() + self.next_key() + self.next_key() + self.next_key()) * 0.25_f64,
         )

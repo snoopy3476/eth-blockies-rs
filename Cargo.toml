@@ -1,7 +1,17 @@
 [package]
 name = "eth-blockies"
-version = "0.1.0"
+version = "0.9.0"
+authors = [ "Kim Hwiwon <kim.hwiwon@outlook.com>" ]
 edition = "2021"
+description = "A lightweight library to get Ethereum blockies raw data, which can be used for creating blockies icon images, printing to terminal, etc."
+repository = "https://github.com/snoopy3476/eth-blockies-rs.git"
+license = "MIT"
+keywords = [ "ethereum", "blockies", "icon" ]
+categories = [ "cryptography::cryptocurrencies",
+               "multimedia::images",
+               "encoding",
+               "no-std",
+               "wasm" ]
 
 # for bencher
 

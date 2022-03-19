@@ -1,0 +1,114 @@
+::selection {
+  color: #34f;
+  background-color: #ccfa;
+}
+
+html {
+  overflow-y: scroll;
+}
+
+body {
+  padding: 1vw 5vw;
+  text-align: center;
+  font-family: sans-serif;
+  background-color: #eef;
+}
+
+/* blockies object */
+.blockies {
+  display: inline-block;
+  width: 15ch;
+  margin: 0 auto 2vw auto;
+  font-family: courier;
+  flex: 0 0 12%;
+}
+#blockies-wrapper > .blockies {
+  background-color: #555;
+  padding: 2ch 2ch 1ch;
+  border-radius: 1vw;
+}
+
+/* img of blockies object */
+.blockies > a > img {
+  display: block;
+  width: 14ch;
+  height: 14ch;
+  border-radius: 1ch;
+  border-width: 0.5ch;
+  border-color: #ddf;
+  border-style: solid;
+  transition: border-color 0.5s ease;
+  margin: auto;
+}
+.blockies.invalid-addr > a > img {
+  border-color: #faa;
+}
+
+/* caption of blockies object */
+.blockies > figcaption {
+  width: 14ch;
+  display: block;
+  word-wrap: break-word;
+  margin: 1ch auto;
+  transition: color 0.5s ease;
+}
+.blockies > figcaption {
+  color: #666;
+}
+.blockies.invalid-addr > figcaption {
+  color: #f66;
+}
+.blockies.invalid-addr > figcaption::selection {
+  color: #f43;
+  background-color: #fcca;
+}
+#blockies-wrapper > .blockies > figcaption {
+  color: #fff;
+}
+#blockies-wrapper > .blockies.invalid-addr > figcaption {
+  color: #faa;
+}
+
+/* eth-blockies-rs link */
+.project-link {
+  color: #f55;
+}
+.project-link::selection {
+  color: #f00;
+  background-color: #fcca;
+}
+
+/* main section */
+#user-addr-input {
+  width: 42ch;
+  font-size: 3vw;
+  font-family: courier;
+  border: none;
+  transition: background-color 0.5s ease;
+  background-color: #fff;
+  margin: 1.5vw 0;
+}
+#user-addr-input:focus {
+  background-color: #ddf;
+}
+#user-addr-input[pattern]:invalid {
+  background-color: #fbb;
+}
+
+/* user addr input blockies wrapper */
+#blockies-wrapper {
+  display: flex;
+  flex-flow: column wrap;
+  justify-content: center;
+  margin: auto auto 2vw auto;
+  width: max-content;
+  min-height: 20em;
+}
+
+/* example section */
+#blockies-examples {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: space-around;
+  margin: 3vw auto;
+}
