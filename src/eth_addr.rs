@@ -2,12 +2,12 @@ extern crate alloc;
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 
-/// Trait for canonicalizing Ethereum wallet address, which are used to blockies input
-pub trait EthWalletAddr {
+/// Trait for canonicalizing Ethereum address, which are used to blockies input
+pub trait EthAddr {
     fn addr_as_ref(&self) -> &str;
 
-    /// Convert given wallet address string to match the following format:  
-    /// * `0x(wallet_addr_hex_ascii_lowercase)`
+    /// Convert given Ethereum address string to match the following format:  
+    /// * `0x(eth_addr_hex_ascii_lowercase)`
     ///
     /// # Example
     ///
@@ -33,17 +33,17 @@ pub trait EthWalletAddr {
     }
 }
 
-impl EthWalletAddr for String {
+impl EthAddr for String {
     fn addr_as_ref(&self) -> &str {
         self.as_str()
     }
 }
-impl EthWalletAddr for &String {
+impl EthAddr for &String {
     fn addr_as_ref(&self) -> &str {
         self.as_str()
     }
 }
-impl EthWalletAddr for &str {
+impl EthAddr for &str {
     fn addr_as_ref(&self) -> &str {
         self
     }

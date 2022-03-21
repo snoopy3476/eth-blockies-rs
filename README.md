@@ -17,7 +17,7 @@ Supports wide range of targets including Rust bin/lib, and WebAssembly (wasm).
 * `Cargo.toml`
 ```toml
 [dependencies]
-eth-blockies = "0.9.0"
+eth-blockies = "0.9.1"
 ```
 
 
@@ -45,13 +45,15 @@ let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
         (r as f64 * 0.299 + g as f64 * 0.587 + b as f64 * 0.114) as u8
     }
     
-    let blockies_data_grayscale = eth_blockies_data_mapped(&addr, rgb_to_grayscale);
+    let blockies_data_grayscale =
+        eth_blockies_data_mapped(&addr, rgb_to_grayscale);
 }
 
 
 // get (color palette, palette index of each pixel)
 {
-   let (color_palette, palette_idx_bitmap) = eth_blockies_indexed_data(&addr);
+    let (color_palette, palette_idx_bitmap) =
+        eth_blockies_indexed_data(&addr);
 }
 ```
 
@@ -75,11 +77,15 @@ std::fs::File::create("test.png").unwrap().write_all(&img_png_data);
 * Generate a html `img` element of a generated blockies, on wasm target
 ```rust
 // addr to blockies data_uri,
-// which can be used directly in img elem attribute 'src' or css 'url()'
+// which can be used directly in img elem 'src' or css 'url()'
 fn eth_blockies_data_uri(addr: &str) -> Option<String> {
     use eth_blockies::*;
 
-    let img_data_base64 = eth_blockies_png_data_base64(addr.addr_canonicalize(), (8, 8));
+    let img_data_base64 =
+        eth_blockies_png_data_base64(
+            addr.addr_canonicalize(),
+            (8, 8)
+        );
 
     String::from_utf8(img_data_base64)
         .map(|data| "data:image/png;base64,".to_owned() + &data)
@@ -96,12 +102,15 @@ window()
     .and_then(|(body, img)| {
         // set data uri to img src
         eth_blockies_data_uri(addr)
-            .and_then(|data_uri| img.set_attribute("src", &data_uri).ok());
+            .and_then(|data_uri|
+                img.set_attribute("src", &data_uri).ok()
+            );
 
         img.set_attribute(
             "style",
             concat!(
-                "image-rendering: pixelated !important; ", // no blur on scaling
+                // no blur on scaling
+                "image-rendering: pixelated !important; ",
                 "width: 120px; height: 120px;",
             ),
         );

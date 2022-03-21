@@ -8,8 +8,8 @@
 //!
 //! # Example
 //!
-//! * For all functions, each address argument for Ethereum wallet (`wallet_addr`) should be all lowercase, with leading '`0x`'.  
-//!   This can be done with [`addr_canonicalize`](eth_wallet_addr::EthWalletAddr::addr_canonicalize).
+//! * For all functions, each address argument for Ethereum (`eth_addr`) should be all lowercase, with leading '`0x`'.  
+//!   This can be done with [`addr_canonicalize`](eth_addr::EthAddr::addr_canonicalize).
 //! ```
 //! use eth_blockies::*;
 //!
@@ -81,8 +81,8 @@ use alloc::vec::Vec;
 
 mod colorclass;
 pub use colorclass::{ColorClass, ColorClassArrayMap};
-mod eth_wallet_addr;
-pub use eth_wallet_addr::EthWalletAddr;
+mod eth_addr;
+pub use eth_addr::EthAddr;
 mod indexed_png;
 use indexed_png::*;
 
@@ -115,7 +115,7 @@ pub type Palette = ColorClassArrayMap<RgbPixel>;
 ///
 /// # Arguments
 ///
-/// * `wallet_addr` - Wallet address
+/// * `eth_addr` - Ethereum address
 ///
 /// # Return
 ///
@@ -130,8 +130,8 @@ pub type Palette = ColorClassArrayMap<RgbPixel>;
 /// ```
 ///
 #[allow(dead_code)]
-pub fn eth_blockies_data<W: EthWalletAddr>(wallet_addr: W) -> EthBlockies<RgbPixel> {
-    eth_blockies_data_mapped(wallet_addr, |rgb_pixel| rgb_pixel)
+pub fn eth_blockies_data<W: EthAddr>(eth_addr: W) -> EthBlockies<RgbPixel> {
+    eth_blockies_data_mapped(eth_addr, |rgb_pixel| rgb_pixel)
 }
 
 /// Get Ethereum blockies data in mapped format with `map_fn`
@@ -142,7 +142,7 @@ pub fn eth_blockies_data<W: EthWalletAddr>(wallet_addr: W) -> EthBlockies<RgbPix
 ///
 /// # Arguments
 ///
-/// * `wallet_addr` - Wallet address
+/// * `eth_addr` - Ethereum address
 /// * `map_fn` - Mapping function for each element in array return
 ///
 /// # Return
@@ -163,11 +163,11 @@ pub fn eth_blockies_data<W: EthWalletAddr>(wallet_addr: W) -> EthBlockies<RgbPix
 /// ```
 ///
 #[allow(dead_code)]
-pub fn eth_blockies_data_mapped<W: EthWalletAddr, T: Clone, F: Fn(RgbPixel) -> T>(
-    wallet_addr: W,
+pub fn eth_blockies_data_mapped<W: EthAddr, T: Clone, F: Fn(RgbPixel) -> T>(
+    eth_addr: W,
     map_fn: F,
 ) -> EthBlockies<T> {
-    let (palette, class_bitmap) = eth_blockies_indexed_data(wallet_addr);
+    let (palette, class_bitmap) = eth_blockies_indexed_data(eth_addr);
 
     let mut ret_bitmap: EthBlockies<T> = unsafe { core::mem::MaybeUninit::uninit().assume_init() };
     ret_bitmap
@@ -189,7 +189,7 @@ pub fn eth_blockies_data_mapped<W: EthWalletAddr, T: Clone, F: Fn(RgbPixel) -> T
 ///
 /// # Arguments
 ///
-/// * `wallet_addr` - Wallet address
+/// * `eth_addr` - Ethereum address
 ///
 /// # Return
 ///
@@ -204,10 +204,10 @@ pub fn eth_blockies_data_mapped<W: EthWalletAddr, T: Clone, F: Fn(RgbPixel) -> T
 /// ```
 ///
 #[allow(dead_code)]
-pub fn eth_blockies_indexed_data<W: EthWalletAddr>(
-    wallet_addr: W,
+pub fn eth_blockies_indexed_data<W: EthAddr>(
+    eth_addr: W,
 ) -> (Palette, EthBlockies<ColorClass>) {
-    let mut keygen = BlockiesGenerator::new(wallet_addr.addr_as_ref().as_bytes());
+    let mut keygen = BlockiesGenerator::new(eth_addr.addr_as_ref().as_bytes());
 
     let mut palette: Palette = unsafe { core::mem::MaybeUninit::uninit().assume_init() };
     [
@@ -251,8 +251,8 @@ pub fn eth_blockies_indexed_data<W: EthWalletAddr>(
 /// use std::io::Write;
 /// std::fs::File::create("test.png").unwrap().write_all(&img_png_data);
 /// ```
-pub fn eth_blockies_png_data<W: EthWalletAddr>(wallet_addr: W, dimension: (u32, u32)) -> Vec<u8> {
-    indexed_data_to_png(eth_blockies_indexed_data(wallet_addr), dimension)
+pub fn eth_blockies_png_data<W: EthAddr>(eth_addr: W, dimension: (u32, u32)) -> Vec<u8> {
+    indexed_data_to_png(eth_blockies_indexed_data(eth_addr), dimension)
 }
 
 /// Get Ethereum blockies data in base64 format of indexed png
@@ -269,11 +269,11 @@ pub fn eth_blockies_png_data<W: EthWalletAddr>(wallet_addr: W, dimension: (u32, 
 /// f.write_all(b"data:image/png;base64,");
 /// f.write_all(&img_png_data);
 /// ```
-pub fn eth_blockies_png_data_base64<W: EthWalletAddr>(
-    wallet_addr: W,
+pub fn eth_blockies_png_data_base64<W: EthAddr>(
+    eth_addr: W,
     dimension: (u32, u32),
 ) -> Vec<u8> {
-    indexed_data_to_png_base64(eth_blockies_indexed_data(wallet_addr), dimension)
+    indexed_data_to_png_base64(eth_blockies_indexed_data(eth_addr), dimension)
 }
 
 /// Ethereum blockies generator, which stores necessary seeds for creating blockies

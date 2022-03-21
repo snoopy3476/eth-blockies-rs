@@ -19,7 +19,7 @@ body {
   display: inline-block;
   width: 15ch;
   margin: 0 auto 2vw auto;
-  font-family: courier;
+  font-family: 'courier new', 'courier', monospace;
   flex: 0 0 12%;
 }
 #blockies-wrapper > .blockies {
@@ -39,6 +39,9 @@ body {
   border-style: solid;
   transition: border-color 0.5s ease;
   margin: auto;
+}
+.blockies > a > img:hover {
+  border-color: #0df;
 }
 .blockies.invalid-addr > a > img {
   border-color: #faa;
@@ -82,7 +85,7 @@ body {
 #user-addr-input {
   width: 42ch;
   font-size: 3vw;
-  font-family: courier;
+  font-family: 'courier new', 'courier', monospace;
   border: none;
   transition: background-color 0.5s ease;
   background-color: #fff;

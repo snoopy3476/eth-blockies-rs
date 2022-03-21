@@ -1,6 +1,6 @@
 [package]
 name = "eth-blockies"
-version = "0.9.0"
+version = "0.9.1"
 authors = [ "Kim Hwiwon <kim.hwiwon@outlook.com>" ]
 edition = "2021"
 description = "A lightweight library to get Ethereum blockies raw data, which can be used for creating blockies icon images, printing to terminal, etc."
@@ -17,9 +17,8 @@ categories = [ "cryptography::cryptocurrencies",
 
 [dev-dependencies]
 bencher = "0.1.5"
-wasm-bindgen-test = "0.3.29"
 
 [[bench]]
-name = "bufchrbench"
+name = "benches"
 harness = false
 path = "benches/bench.rs"
