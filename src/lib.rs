@@ -53,6 +53,11 @@
 //! {
 //!     let (color_palette, palette_idx_bitmap) =
 //!         eth_blockies_indexed_data(&addr);
+//!
+//!     assert_eq!(
+//!         color_palette[palette_idx_bitmap[0][0]],
+//!         (132, 222, 77)
+//!     );
 //! }
 //! ```
 //!
@@ -74,6 +79,51 @@
 //! ```
 //!
 //!
+//!
+//! * Generate an html `img` element of a generated blockies, on wasm target
+//! ```ignore
+//! // addr to blockies data_uri,
+//! // which can be used directly in img elem 'src' or css 'url()'
+//! fn eth_blockies_data_uri(addr: &str) -> Option<String> {
+//!     use eth_blockies::*;
+//!
+//!     let img_data_base64 =
+//!         eth_blockies_png_data_base64(
+//!             addr.addr_canonicalize(),
+//!             (8, 8)
+//!         );
+//!
+//!     String::from_utf8(img_data_base64)
+//!         .map(|data| "data:image/png;base64,".to_owned() + &data)
+//!         .ok()
+//! }
+//!
+//! use web_sys::*;
+//!
+//! let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC";
+//!
+//! window()
+//!     .and_then(|w| w.document())
+//!     .and_then(|doc| doc.body().zip(doc.create_element("img").ok()))
+//!     .and_then(|(body, img)| {
+//!         // set data uri to img src
+//!         eth_blockies_data_uri(addr)
+//!             .and_then(|data_uri|
+//!                 img.set_attribute("src", &data_uri).ok()
+//!             );
+//!
+//!         img.set_attribute(
+//!             "style",
+//!             concat!(
+//!                 // no blur on scaling
+//!                 "image-rendering: pixelated !important; ",
+//!                 "width: 120px; height: 120px;",
+//!             ),
+//!         );
+//!
+//!         body.append_child(&img).ok()
+//!     });
+//! ```
 
 #![no_std]
 extern crate alloc;
@@ -201,12 +251,25 @@ pub fn eth_blockies_data_mapped<W: EthAddr, T: Clone, F: Fn(RgbPixel) -> T>(
 /// let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
 ///     .addr_canonicalize();
 /// let (color_palette, palette_idx_bitmap) = eth_blockies_indexed_data(addr);
+///
+/// // get (r, g, b) from palette
+/// assert_eq!(color_palette[ColorClass::BgColor], (38, 173, 52));
+/// assert_eq!(color_palette[ColorClass::Color], (132, 222, 77));
+/// assert_eq!(color_palette[ColorClass::SpotColor], (4, 201, 40));
+///
+/// // get color class from pixels
+/// assert_eq!(palette_idx_bitmap[0][0], ColorClass::Color);
+/// assert_eq!(palette_idx_bitmap[2][0], ColorClass::SpotColor);
+/// assert_eq!(palette_idx_bitmap[1][1], ColorClass::BgColor);
+///
+/// // get (r, g, b) from pixels
+/// assert_eq!(color_palette[palette_idx_bitmap[0][0]], (132, 222, 77));
+/// assert_eq!(color_palette[palette_idx_bitmap[2][0]], (4, 201, 40));
+/// assert_eq!(color_palette[palette_idx_bitmap[1][1]], (38, 173, 52));
 /// ```
 ///
 #[allow(dead_code)]
-pub fn eth_blockies_indexed_data<W: EthAddr>(
-    eth_addr: W,
-) -> (Palette, EthBlockies<ColorClass>) {
+pub fn eth_blockies_indexed_data<W: EthAddr>(eth_addr: W) -> (Palette, EthBlockies<ColorClass>) {
     let mut keygen = BlockiesGenerator::new(eth_addr.addr_as_ref().as_bytes());
 
     let mut palette: Palette = unsafe { core::mem::MaybeUninit::uninit().assume_init() };
@@ -269,10 +332,7 @@ pub fn eth_blockies_png_data<W: EthAddr>(eth_addr: W, dimension: (u32, u32)) -> 
 /// f.write_all(b"data:image/png;base64,");
 /// f.write_all(&img_png_data);
 /// ```
-pub fn eth_blockies_png_data_base64<W: EthAddr>(
-    eth_addr: W,
-    dimension: (u32, u32),
-) -> Vec<u8> {
+pub fn eth_blockies_png_data_base64<W: EthAddr>(eth_addr: W, dimension: (u32, u32)) -> Vec<u8> {
     indexed_data_to_png_base64(eth_blockies_indexed_data(eth_addr), dimension)
 }
 

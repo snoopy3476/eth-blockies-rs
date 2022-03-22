@@ -2,7 +2,7 @@ use core::convert::TryFrom;
 use core::ops::{Index, IndexMut};
 
 /// Type of color in Ethereum blockies
-#[derive(PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 #[repr(u8)]
 pub enum ColorClass {
     /// Color 1

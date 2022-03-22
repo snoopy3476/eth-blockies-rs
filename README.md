@@ -54,6 +54,11 @@ let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
 {
     let (color_palette, palette_idx_bitmap) =
         eth_blockies_indexed_data(&addr);
+
+    assert_eq!(
+        color_palette[palette_idx_bitmap[0][0]],
+        (132, 222, 77)
+    );
 }
 ```
 
@@ -74,7 +79,7 @@ std::fs::File::create("test.png").unwrap().write_all(&img_png_data);
 
 
 
-* Generate a html `img` element of a generated blockies, on wasm target
+* Generate an html `img` element of a generated blockies, on wasm target
 ```rust
 // addr to blockies data_uri,
 // which can be used directly in img elem 'src' or css 'url()'

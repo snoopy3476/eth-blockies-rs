@@ -64,9 +64,16 @@ fn plte_chunk(palette: Palette) -> Vec<u8> {
 
 fn idat_chunk(data: EthBlockies<ColorClass>, dimension: (u32, u32), bit_depth: u8) -> Vec<u8> {
     const CHUNK_TYPE: &[u8] = b"IDAT";
-    const COMPRESSION_METHOD: &[u8] = b"\x78\xda";
-    const IS_LAST_BLOCK: &[u8] = &[1_u8];
-    const FILTER_TYPE: &[u8] = &[0_u8];
+    const CM: u8 = 8;
+    const CINFO: u8 = 7;
+    const COMPRESSION_METHOD: &[u8] = &[CINFO << 4 | CM];
+    const FCHECK: u8 = 1;
+    const FDICT: u8 = 0;
+    const FLEVEL: u8 = 0;
+    const FLG: &[u8] = &[FLEVEL << 6 | FDICT << 5 | FCHECK];
+
+    const IS_LAST_BLOCK: &[u8] = &[1];
+    const FILTER_TYPE: &[u8] = &[0];
     let sample_per_byte: usize = (u8::BITS as u8 / bit_depth) as usize;
 
     let mut chunk_data: Vec<u8> = CHUNK_TYPE.to_vec();
@@ -76,6 +83,7 @@ fn idat_chunk(data: EthBlockies<ColorClass>, dimension: (u32, u32), bit_depth: u
         dimension.1 as f64 / data.len() as f64,
     );
     chunk_data.extend_from_slice(COMPRESSION_METHOD);
+    chunk_data.extend_from_slice(FLG);
     chunk_data.extend_from_slice(IS_LAST_BLOCK);
 
     // 4000
