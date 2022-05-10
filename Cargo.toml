@@ -1,6 +1,6 @@
 [package]
 name = "eth-blockies"
-version = "0.9.2"
+version = "1.0.0"
 authors = [ "Kim Hwiwon <kim.hwiwon@outlook.com>" ]
 edition = "2021"
 description = "A lightweight library to get Ethereum blockies raw data, which can be used for creating blockies icon images, printing to terminal, etc."

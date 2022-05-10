@@ -14,7 +14,7 @@ Supports not only general Rust bin/lib, but also WebAssembly (wasm).
 
 ## Documents
 
-* Check for the [library documents on **docs.rs**](https://docs.rs/eth-blockies/0.9.2/eth_blockies/) for details.
+* Check for the [library documents on **docs.rs**](https://docs.rs/eth-blockies/1.0.0/eth_blockies/) for details.
 
 
 
@@ -22,7 +22,7 @@ Supports not only general Rust bin/lib, but also WebAssembly (wasm).
 * `Cargo.toml`
 ```toml
 [dependencies]
-eth-blockies = "0.9.2"
+eth-blockies = "1.0.0"
 ```
 
 

@@ -9,7 +9,7 @@
 //! # Example
 //!
 //! * For all functions, each address argument for Ethereum (`eth_addr`) should be all lowercase, with leading '`0x`'.  
-//!   This can be done with [`addr_canonicalize`](eth_addr::EthAddr::addr_canonicalize).
+//!   This can be done with [`addr_canonicalize`](type_helper::eth_addr::EthAddr::addr_canonicalize).
 //! ```
 //! use eth_blockies::*;
 //!
@@ -34,6 +34,12 @@
 //! // get 2D array of (r, g, b)
 //! {
 //!     let blockies_data_rgb = eth_blockies_data(&addr);
+//! }
+//!
+//!
+//! // get 1D array of (r, g, b)
+//! {
+//!     let blockies_data_rgb = eth_blockies_data(&addr).serialize();
 //! }
 //!
 //!
@@ -63,8 +69,8 @@
 //!
 //!
 //!
-//! * Write a generated blockies to png file `text.png`,
-//!   on Rust binary/library target
+//! * Write a generated blockies uncompressed png data to file `text.png`,
+//!   on general Rust binary/library target
 //! ```
 //! use eth_blockies::*;
 //!
@@ -73,14 +79,20 @@
 //! let dimension = (128, 128);
 //! let img_png_data = eth_blockies_png_data(addr, dimension);
 //!
-//! use std::io::Write;
-//! std::fs::File::create("test.png").unwrap()
-//!     .write_all(&img_png_data);
+//! // uncomment below to write to file
+//!
+//! // use std::io::Write;
+//! // std::fs::File::create("test.png").unwrap()
+//! //     .write_all(&img_png_data);
 //! ```
 //!
 //!
 //!
-//! * Generate an html `img` element of a generated blockies, on wasm target
+//! * Generate an html `img` element of a generated blockies, on wasm target  
+//!   
+//!   * First generate 8x8 image data string,
+//!     then tell a browser to scale up properly when showing  
+//!     (using style properties `width`, `height` and `image-rendering: pixelated`)
 //! ```ignore
 //! // addr to blockies data_uri,
 //! // which can be used directly in img elem 'src' or css 'url()'
@@ -126,44 +138,20 @@
 //! ```
 
 #![no_std]
+
+mod type_helper;
+pub use type_helper::{eth_addr::EthAddr, eth_blockies_data::*};
+mod data_encoder;
+use data_encoder::indexed_png::*;
+mod blockies_generator;
+use blockies_generator::BlockiesGenerator;
+
 extern crate alloc;
 use alloc::vec::Vec;
 use core::{
     mem::{transmute, MaybeUninit},
     ptr::addr_of_mut,
 };
-
-mod colorclass;
-pub use colorclass::{ColorClass, ColorClassArrayMap};
-mod eth_addr;
-pub use eth_addr::EthAddr;
-mod indexed_png;
-use indexed_png::*;
-
-/// Unit RGB pixel data
-pub type RgbPixel = (u8, u8, u8);
-
-/// Dimension of Ethereum blockies data
-const BLOCKIES_SIZE: usize = 8;
-
-/// Ethereum blockies row data with type `T`
-pub type EthBlockiesRow<T> = [T; BLOCKIES_SIZE];
-/// Ethereum blockies data with type `T`
-pub type EthBlockies<T> = [EthBlockiesRow<T>; BLOCKIES_SIZE];
-
-/// Array map of colors composing Ethereum blockies
-///
-/// # Example
-/// ```
-/// use eth_blockies::*;
-///
-/// let colorclass_map: Palette = [(0, 0, 0), (127, 127, 127), (255, 255, 255)];
-///
-/// assert_eq!(colorclass_map[ColorClass::BgColor], (0, 0, 0));
-/// assert_eq!(colorclass_map[ColorClass::Color], (127, 127, 127));
-/// assert_eq!(colorclass_map[ColorClass::SpotColor], (255, 255, 255));
-/// ```
-pub type Palette = ColorClassArrayMap<RgbPixel>;
 
 /// Get Ethereum blockies data
 ///
@@ -180,9 +168,14 @@ pub type Palette = ColorClassArrayMap<RgbPixel>;
 /// use eth_blockies::*;
 /// let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
 ///     .addr_canonicalize();
+///
+/// // 2D array data
 /// let blockies_data_rgb = eth_blockies_data(addr);
 ///
-/// let COLORS: Palette = [(38, 173, 52), (132, 222, 77), (4, 201, 40)];
+/// // 1D array (serial) data
+/// let blockies_serial_data_rgb = blockies_data_rgb.serialize();
+///
+/// const COLORS: Palette = [(38, 173, 52), (132, 222, 77), (4, 201, 40)];
 ///
 /// assert_eq!(blockies_data_rgb, [ [
 ///         COLORS[1], COLORS[1], COLORS[1], COLORS[1],
@@ -210,6 +203,32 @@ pub type Palette = ColorClassArrayMap<RgbPixel>;
 ///         COLORS[1], COLORS[0], COLORS[0], COLORS[1],
 ///     ], ]
 /// );
+///
+/// assert_eq!(blockies_serial_data_rgb, [
+///     COLORS[1], COLORS[1], COLORS[1], COLORS[1],
+///     COLORS[1], COLORS[1], COLORS[1], COLORS[1],
+///
+///     COLORS[1], COLORS[0], COLORS[0], COLORS[2],
+///     COLORS[2], COLORS[0], COLORS[0], COLORS[1],
+///
+///     COLORS[2], COLORS[1], COLORS[1], COLORS[0],
+///     COLORS[0], COLORS[1], COLORS[1], COLORS[2],
+///
+///     COLORS[0], COLORS[0], COLORS[2], COLORS[0],
+///     COLORS[0], COLORS[2], COLORS[0], COLORS[0],
+///
+///     COLORS[1], COLORS[0], COLORS[1], COLORS[2],
+///     COLORS[2], COLORS[1], COLORS[0], COLORS[1],
+///
+///     COLORS[1], COLORS[2], COLORS[1], COLORS[2],
+///     COLORS[2], COLORS[1], COLORS[2], COLORS[1],
+///
+///     COLORS[0], COLORS[2], COLORS[1], COLORS[2],
+///     COLORS[2], COLORS[1], COLORS[2], COLORS[0],
+///
+///     COLORS[1], COLORS[0], COLORS[0], COLORS[1],
+///     COLORS[1], COLORS[0], COLORS[0], COLORS[1],
+/// ]);
 /// ```
 ///
 #[allow(dead_code)]
@@ -371,7 +390,20 @@ pub fn eth_blockies_indexed_data<W: EthAddr>(eth_addr: W) -> (Palette, EthBlocki
     (palette, bitmap)
 }
 
-/// Get Ethereum blockies data in indexed png format
+/// Get Ethereum blockies data in uncompressed indexed png format
+///
+/// * Note that this function is not suitable for high resolution blockies image, as a generated png is uncompressed
+///
+/// # Arguments
+///
+/// * `eth_addr` - Ethereum address
+/// * `dimension` - (width, height) of output png binary data
+///
+/// # Return
+///
+/// * A byte vector of png binary data
+///
+/// # Example
 ///
 /// * For image file
 /// ```
@@ -381,6 +413,8 @@ pub fn eth_blockies_indexed_data<W: EthAddr>(eth_addr: W) -> (Palette, EthBlocki
 ///     .addr_canonicalize();
 /// let img_png_data = eth_blockies_png_data(addr, (128, 128));
 ///
+/// // uncomment below to write to file
+///
 /// // use std::io::Write;
 /// // std::fs::File::create("test.png").unwrap().write_all(&img_png_data);
 /// ```
@@ -388,7 +422,20 @@ pub fn eth_blockies_png_data<W: EthAddr>(eth_addr: W, dimension: (u32, u32)) -> 
     indexed_data_to_png(eth_blockies_indexed_data(eth_addr), dimension)
 }
 
-/// Get Ethereum blockies data in base64 format of indexed png
+/// Get Ethereum blockies data in base64 format of uncompressed indexed png
+///
+/// * Note that this function is not suitable for high resolution blockies image, as a generated png is uncompressed
+///
+/// # Arguments
+///
+/// * `eth_addr` - Ethereum address
+/// * `dimension` - (width, height) of output png binary data
+///
+/// # Return
+///
+/// * A byte vector (ASCII string) of base64-encoded png binary data
+///
+/// # Example
 ///
 /// ```
 /// use eth_blockies::*;
@@ -397,6 +444,8 @@ pub fn eth_blockies_png_data<W: EthAddr>(eth_addr: W, dimension: (u32, u32)) -> 
 ///     .addr_canonicalize();
 /// let img_png_data = eth_blockies_png_data_base64(addr, (8, 8));
 ///
+/// // uncomment below to write to file
+///
 /// // use std::io::Write;
 /// // let mut f = std::fs::File::create("test.png.base64").unwrap();
 /// // f.write_all(b"data:image/png;base64,");
@@ -404,136 +453,4 @@ pub fn eth_blockies_png_data<W: EthAddr>(eth_addr: W, dimension: (u32, u32)) -> 
 /// ```
 pub fn eth_blockies_png_data_base64<W: EthAddr>(eth_addr: W, dimension: (u32, u32)) -> Vec<u8> {
     indexed_data_to_png_base64(eth_blockies_indexed_data(eth_addr), dimension)
-}
-
-/// Ethereum blockies generator, which stores necessary seeds for creating blockies
-struct BlockiesGenerator {
-    /// Seeds for generating ethereum blockies  
-    /// (Named as "randseed" in original implementation)
-    key_seeds: [i32; BlockiesGenerator::KEY_SEEDS_LEN],
-    /// Current index of key_seeds to update when next_key runs
-    key_seed_curidx: usize,
-}
-
-impl BlockiesGenerator {
-    const KEY_SEEDS_LEN: usize = 4;
-
-    /// Initialize new ethereum blockies generator using a given seed byte sequences
-    fn new(seed: &[u8]) -> Self {
-        Self {
-            key_seeds: (seed.chunks(BlockiesGenerator::KEY_SEEDS_LEN).fold(
-                [0_i32; BlockiesGenerator::KEY_SEEDS_LEN],
-                |mut key_seeds_acc, seed_chunks| {
-                    key_seeds_acc.iter_mut().zip(seed_chunks.iter()).for_each(
-                        |(key_seed_cur, seed_char_cur)| {
-                            *key_seed_cur = Self::key_seed_init(*key_seed_cur, *seed_char_cur)
-                        },
-                    );
-
-                    key_seeds_acc
-                },
-            )),
-            key_seed_curidx: 0,
-        }
-    }
-
-    /// Update single element in key_seeds for initialization
-    fn key_seed_init(key_seed_cur: i32, seed_char_cur: u8) -> i32 {
-        (key_seed_cur << 5)
-            .overflowing_sub(key_seed_cur)
-            .0
-            .overflowing_add(seed_char_cur as i32)
-            .0
-    }
-
-    /// Get previous index of key_seeds
-    fn idx_prev(idx: usize) -> usize {
-        idx.overflowing_sub(1).0 % BlockiesGenerator::KEY_SEEDS_LEN
-    }
-
-    /// Get next index of key_seeds
-    fn idx_next(idx: usize) -> usize {
-        idx.overflowing_add(1).0 % BlockiesGenerator::KEY_SEEDS_LEN
-    }
-
-    /// Get next computed key using key_seeds, which is used for blockies generation
-    /// Returns f64 in range: [0, 1]
-    fn next_key(&mut self) -> f64 {
-        self.key_seeds
-            .get(Self::idx_prev(self.key_seed_curidx))
-            .zip(self.key_seeds.get(self.key_seed_curidx))
-            // calc new cur val
-            .map(|(key_seed_prev, key_seed_cur)| {
-                let tmp = *key_seed_cur ^ (*key_seed_cur << 11);
-                *key_seed_prev ^ (*key_seed_prev >> 19) ^ tmp ^ (tmp >> 8)
-            })
-            // update self members
-            .and_then(|key_seed_new_cur| {
-                self.key_seeds
-                    .get_mut(self.key_seed_curidx)
-                    .map(|key_seed_cur_mut| {
-                        self.key_seed_curidx = Self::idx_next(self.key_seed_curidx);
-
-                        *key_seed_cur_mut = key_seed_new_cur;
-                        key_seed_new_cur
-                    })
-            })
-            // map to return val: map key_seed_new_cur in [0, 1] range
-            .map(|key_seed_new_cur| {
-                key_seed_new_cur.unsigned_abs() as f64 / ((i32::MAX as u32 + 1) as f64)
-            })
-            .expect("next_key")
-    }
-
-    /// Get next RGB pixel for palette using key_seeds
-    fn next_rgb(&mut self) -> RgbPixel {
-        fn hsl_to_rgb(hue: u32, saturation: f64, lightness: f64) -> RgbPixel {
-            fn hue_to_rgb(p: f64, q: f64, t: u32) -> f64 {
-                let t = match t {
-                    0..=359 => t,
-                    _ => t % 360,
-                };
-
-                return match t {
-                    0..=60 => p + (q - p) * t as f64 / 60_f64,
-                    0..=180 => q,
-                    0..=240 => p + (q - p) * (4_f64 - t as f64 / 60_f64),
-                    _ => p,
-                };
-            }
-
-            let rgb_frac = match saturation == 0_f64 {
-                true => (lightness, lightness, lightness),
-                false => {
-                    let q = match lightness < 0.5 {
-                        true => lightness * (1_f64 + saturation),
-                        false => lightness + saturation - lightness * saturation,
-                    };
-                    let p = 2_f64 * lightness - q;
-                    (
-                        hue_to_rgb(p, q, hue.overflowing_add(120).0),
-                        hue_to_rgb(p, q, hue),
-                        hue_to_rgb(p, q, hue.overflowing_add(240).0),
-                    )
-                }
-            };
-
-            (
-                ((rgb_frac.0 * 255_f64) + 0.5_f64) as u8,
-                ((rgb_frac.1 * 255_f64) + 0.5_f64) as u8,
-                ((rgb_frac.2 * 255_f64) + 0.5_f64) as u8,
-            )
-        }
-
-        hsl_to_rgb(
-            (self.next_key() * 360_f64) as u32,
-            self.next_key() * 0.6_f64 + 0.4_f64,
-            (self.next_key() + self.next_key() + self.next_key() + self.next_key()) * 0.25_f64,
-        )
-    }
-
-    /// Get next color class for current pixel using key_seeds
-    fn next_colorclass(&mut self) -> ColorClass {
-        ((self.next_key() * 2.3_f64) as u8).try_into().unwrap()
-    }
 }

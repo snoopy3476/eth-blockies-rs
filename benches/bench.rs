@@ -7,6 +7,11 @@ fn bench_eth_blockies_data(bench: &mut bencher::Bencher) {
         eth_blockies_data("0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc");
     });
 }
+fn bench_eth_blockies_data_serialized(bench: &mut bencher::Bencher) {
+    bench.iter(|| {
+        eth_blockies_data("0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc").serialize();
+    });
+}
 
 fn bench_eth_blockies_data_mapped(bench: &mut bencher::Bencher) {
     fn rgb_to_grayscale((r, g, b): RgbPixel) -> u8 {
@@ -54,6 +59,7 @@ fn bench_indexed_data_to_png_base64_128(bench: &mut bencher::Bencher) {
 benchmark_group!(
     benches,
     bench_eth_blockies_data,
+    bench_eth_blockies_data_serialized,
     bench_eth_blockies_data_mapped,
     bench_eth_blockies_indexed_data,
     bench_indexed_data_to_png_8,

@@ -1,6 +1,6 @@
-extern crate alloc;
+use crate::{ColorClass, EthBlockies, Palette};
 
-use super::{ColorClass, EthBlockies, Palette};
+extern crate alloc;
 use alloc::vec::Vec;
 
 /// Convert indexed raw data to indexed png data
