@@ -2,14 +2,19 @@
 A lightweight library in pure Rust to get Ethereum blockies raw data (or png images),
 which can be used for creating blockies icon images, printing to terminal, etc.
 
-Supports wide range of targets including Rust bin/lib, and WebAssembly (wasm).
+Supports not only general Rust bin/lib, but also WebAssembly (wasm).
 
 
 
 ## Live Demo
 
-* Check for the following wasm demo to generate your address blockies:  
-[**DEMO**: Ethereum Blockies Generator](https://snoopy3476.github.io/eth-blockies-rs)
+* Check for the [**wasm demo** (Ethereum Blockies Generator)](https://snoopy3476.github.io/eth-blockies-rs) to generate your address blockies.
+
+
+
+## Documents
+
+* Check for the [library documents on **docs.rs**](https://docs.rs/eth-blockies/0.9.2/eth_blockies/) for details.
 
 
 
@@ -17,7 +22,7 @@ Supports wide range of targets including Rust bin/lib, and WebAssembly (wasm).
 * `Cargo.toml`
 ```toml
 [dependencies]
-eth-blockies = "0.9.1"
+eth-blockies = "0.9.2"
 ```
 
 

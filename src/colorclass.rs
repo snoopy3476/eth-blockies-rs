@@ -32,7 +32,7 @@ impl TryFrom<u8> for ColorClass {
 
     fn try_from(raw_value: u8) -> Result<Self, Self::Error> {
         match raw_value {
-            0..=2 => Ok(unsafe { core::mem::transmute::<_, ColorClass>(raw_value) }),
+            0..=2 => Ok(unsafe { core::mem::transmute(raw_value) }),
             _ => Err(()),
         }
     }

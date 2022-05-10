@@ -86,11 +86,12 @@ fn idat_chunk(data: EthBlockies<ColorClass>, dimension: (u32, u32), bit_depth: u
     chunk_data.extend_from_slice(FLG);
     chunk_data.extend_from_slice(IS_LAST_BLOCK);
 
-    // 4000
+    // build image block
     let mut img_data = (0..dimension.1).map(|scanline| scanline as f64).fold(
         Vec::<u8>::new(),
         |mut ret_vec, scanline| {
             ret_vec.extend_from_slice(FILTER_TYPE);
+
             ret_vec.append(
                 &mut (0..dimension.0)
                     .collect::<Vec<u32>>()
@@ -99,10 +100,12 @@ fn idat_chunk(data: EthBlockies<ColorClass>, dimension: (u32, u32), bit_depth: u
                     .map(|x_chunk| {
                         x_chunk
                             .iter()
+                            // scale to new dimension
                             .map(|x| *x as f64)
                             .map(|pixel_i| {
                                 data[(scanline / scale.1) as usize][(pixel_i / scale.0) as usize]
                             })
+                            // pack to a byte
                             .map(|colorclass| colorclass as u8)
                             .enumerate()
                             .fold(0_u8, |byte, (i, class)| {
@@ -120,7 +123,6 @@ fn idat_chunk(data: EthBlockies<ColorClass>, dimension: (u32, u32), bit_depth: u
     chunk_data.extend_from_slice(&img_data_len.to_le_bytes());
     chunk_data.extend_from_slice(&(!img_data_len).to_le_bytes());
 
-    // 2000
     img_data.extend_from_slice(&adler32(&img_data).to_be_bytes());
     chunk_data.append(&mut img_data);
 
@@ -136,7 +138,6 @@ fn iend_chunk() -> Vec<u8> {
 }
 
 fn pack_png_chunk(chunk_data: &mut Vec<u8>) -> Vec<u8> {
-    // 10000
     let crc_val = crc32(&chunk_data).to_be_bytes();
     let mut chunk: Vec<u8> = Vec::new();
 
