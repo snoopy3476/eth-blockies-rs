@@ -17,7 +17,7 @@ Supports wide range of targets including Rust bin/lib, and WebAssembly (wasm).
 * `Cargo.toml`
 ```toml
 [dependencies]
-eth-blockies = "0.9.1"
+eth-blockies = "0.9.2"
 ```
 
 
