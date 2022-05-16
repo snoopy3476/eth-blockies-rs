@@ -475,9 +475,45 @@ pub fn eth_blockies_indexed_data_mapped<W: EthAddr, T: Clone, F: Fn(ColorClass) 
     (palette, bitmap)
 }
 
+/// Get Ethereum blockies data in ANSI sequence format
+///
+/// * Not implemented yet
+///
+/// # Arguments
+///
+/// * `eth_addr` - Ethereum address
+/// * `dimension` - (width, height) of output png binary data.
+///                 Multiples of 8 recommended for both width and height.
+/// * `is_utf_8` - Determine if print using UTF-8 characters.
+///   * [`true`]: Output data consists of UTF-8 characters,
+///     which makes blockies printed in compact size.
+///   * [`false`]: Output data does not contain any UTF-8 characters,
+///     but its size is bigger as one block is represented as two spaces.
+///
+/// # Return
+///
+/// * A byte vector of ANSI sequnce string data
+///
+/// # Example
+///
+/// ```
+/// use eth_blockies::*;
+///
+/// // (Not implemented yet)
+/// ```
+#[allow(dead_code)]
+fn eth_blockies_ansiseq_data<W: EthAddr>(
+    _eth_addr: W,
+    _dimension: (u32, u32),
+    _is_utf_8: bool,
+) -> Vec<u8> {
+    core::unimplemented!("TO BE IMPLEMENTED");
+}
+
 /// Get Ethereum blockies data in uncompressed indexed png format
 ///
-/// * Note that this function is not suitable for high resolution blockies image, as a generated png is uncompressed
+/// * Note that this function is not suitable for high resolution blockies image,
+///   as a generated png is uncompressed
 ///
 /// # Arguments
 ///
@@ -504,13 +540,15 @@ pub fn eth_blockies_indexed_data_mapped<W: EthAddr, T: Clone, F: Fn(ColorClass) 
 /// // use std::io::Write;
 /// // std::fs::File::create("test.png").unwrap().write_all(&img_png_data);
 /// ```
+#[allow(dead_code)]
 pub fn eth_blockies_png_data<W: EthAddr>(eth_addr: W, dimension: (u32, u32)) -> Vec<u8> {
     indexed_data_to_png(eth_blockies_indexed_data(eth_addr), dimension)
 }
 
 /// Get Ethereum blockies data in base64 format of uncompressed indexed png
 ///
-/// * Note that this function is not suitable for high resolution blockies image, as a generated png is uncompressed
+/// * Note that this function is not suitable for high resolution blockies image,
+///   as a generated png is uncompressed
 ///
 /// # Arguments
 ///
@@ -538,6 +576,7 @@ pub fn eth_blockies_png_data<W: EthAddr>(eth_addr: W, dimension: (u32, u32)) -> 
 /// // f.write_all(b"data:image/png;base64,");
 /// // f.write_all(&img_png_data);
 /// ```
+#[allow(dead_code)]
 pub fn eth_blockies_png_data_base64<W: EthAddr>(eth_addr: W, dimension: (u32, u32)) -> Vec<u8> {
     indexed_data_to_png_base64(eth_blockies_indexed_data(eth_addr), dimension)
 }
