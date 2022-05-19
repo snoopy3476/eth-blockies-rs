@@ -14,3 +14,20 @@ for f in pkg/*.js
 do
 	minify "$f" -o "$f"
 done
+
+
+
+# copy binary & asset to gh-pages
+rm -rf gh-pages
+mkdir -p gh-pages
+
+cp -af pkg/*.html gh-pages
+cp -af pkg/*.css gh-pages
+cp -af pkg/*.js gh-pages
+cp -af pkg/*.wasm gh-pages
+cp -af asset/* gh-pages
+
+
+# run
+cd gh-pages
+python3 -m http.server 0 --bind localhost

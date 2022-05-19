@@ -1,35 +1,33 @@
-use crate::type_helper::eth_blockies_data::{EthBlockiesHelper, PaletteHelper};
-use crate::{ColorClass, EthBlockies, Palette};
+use crate::type_helper::{BlockiesHelper, ColorClass, EthBlockies, RgbPalette, RgbPaletteHelper};
 
-extern crate alloc;
+use alloc::vec;
 use alloc::vec::Vec;
 
-/// Convert indexed raw data to indexed png data
+// Convert indexed raw data to indexed png data
 pub fn indexed_data_to_png(
-    indexed_data: (Palette, EthBlockies<ColorClass>),
-    dimension: (u32, u32),
+    indexed_data: (RgbPalette, EthBlockies<ColorClass>),
+    dimension: (usize, usize),
+    is_compressed: bool,
 ) -> Vec<u8> {
     const PNG_HEADER: &[u8] = b"\x89PNG\r\n\x1a\n";
     const BIT_DEPTH: u8 = 2;
 
+    // build png
     let mut ret_data: Vec<u8> = Vec::from(PNG_HEADER);
     ret_data.append(&mut ihdr_chunk(dimension, BIT_DEPTH));
     ret_data.append(&mut plte_chunk(indexed_data.0));
-    ret_data.append(&mut idat_chunk(indexed_data.1, dimension, BIT_DEPTH));
+    ret_data.append(&mut idat_chunk(
+        indexed_data.1,
+        dimension,
+        BIT_DEPTH,
+        is_compressed,
+    ));
     ret_data.append(&mut iend_chunk());
 
     ret_data
 }
 
-/// Convert indexed raw data to indexed png data in base64 format
-pub fn indexed_data_to_png_base64(
-    indexed_data: (Palette, EthBlockies<ColorClass>),
-    dimension: (u32, u32),
-) -> Vec<u8> {
-    base64(&indexed_data_to_png(indexed_data, dimension))
-}
-
-fn ihdr_chunk(dimension: (u32, u32), bit_depth: u8) -> Vec<u8> {
+fn ihdr_chunk(dimension: (usize, usize), bit_depth: u8) -> Vec<u8> {
     const CHUNK_TYPE: &[u8] = b"IHDR";
 
     const COLOR_TYPE: u8 = 3;
@@ -39,8 +37,8 @@ fn ihdr_chunk(dimension: (u32, u32), bit_depth: u8) -> Vec<u8> {
 
     let mut chunk_data: Vec<u8> = CHUNK_TYPE.to_vec();
 
-    chunk_data.extend_from_slice(&dimension.0.to_be_bytes());
-    chunk_data.extend_from_slice(&dimension.1.to_be_bytes());
+    chunk_data.extend_from_slice(&(dimension.0 as u32).to_be_bytes());
+    chunk_data.extend_from_slice(&(dimension.1 as u32).to_be_bytes());
 
     chunk_data.extend_from_slice(&bit_depth.to_be_bytes());
     chunk_data.extend_from_slice(&[
@@ -53,7 +51,7 @@ fn ihdr_chunk(dimension: (u32, u32), bit_depth: u8) -> Vec<u8> {
     pack_png_chunk(&mut chunk_data)
 }
 
-fn plte_chunk(palette: Palette) -> Vec<u8> {
+fn plte_chunk(palette: RgbPalette) -> Vec<u8> {
     const CHUNK_TYPE: &[u8] = b"PLTE";
 
     let mut chunk_data: Vec<u8> = CHUNK_TYPE.to_vec();
@@ -63,97 +61,77 @@ fn plte_chunk(palette: Palette) -> Vec<u8> {
     pack_png_chunk(&mut chunk_data)
 }
 
-fn idat_chunk(data: EthBlockies<ColorClass>, dimension: (u32, u32), bit_depth: u8) -> Vec<u8> {
+fn idat_chunk(
+    data: EthBlockies<ColorClass>,
+    dimension: (usize, usize),
+    bit_depth: u8,
+    is_compressed: bool,
+) -> Vec<u8> {
     const CHUNK_TYPE: &[u8] = b"IDAT";
-    const CM: u8 = 8;
-    const CINFO: u8 = 7;
-    const COMPRESSION_METHOD: &[u8] = &[CINFO << 4 | CM];
-    const FCHECK: u8 = 1;
-    const FDICT: u8 = 0;
-    const FLEVEL: u8 = 0;
-    const FLG: &[u8] = &[FLEVEL << 6 | FDICT << 5 | FCHECK];
-
-    const IS_LAST_BLOCK: &[u8] = &[1];
     const FILTER_TYPE: &[u8] = &[0];
-    let sample_per_byte: usize = (u8::BITS as u8 / bit_depth) as usize;
 
     let mut chunk_data: Vec<u8> = CHUNK_TYPE.to_vec();
-    chunk_data.extend_from_slice(COMPRESSION_METHOD);
-    chunk_data.extend_from_slice(FLG);
-    chunk_data.extend_from_slice(IS_LAST_BLOCK);
 
-    // build image block
-    let mut img_data =
-        data.scale(dimension)
-            .iter()
-            .fold(Vec::<u8>::new(), |mut ret_vec, scanline| {
-                ret_vec.extend_from_slice(FILTER_TYPE);
+    // build image data
+    let classes_per_byte: usize = (u8::BITS as u8 / bit_depth) as usize;
+    let bytes_per_scanline =
+        FILTER_TYPE.len() + ((dimension.0 + classes_per_byte - 1) / classes_per_byte);
 
-                ret_vec.append(
-                    &mut scanline
-                        .chunks(sample_per_byte)
-                        .map(|x_chunk| {
-                            x_chunk
-                                .iter()
-                                .map(|colorclass| (*colorclass).into())
-                                .enumerate()
-                                .fold(0_u8, |byte, (idx, class): (_, u8)| {
-                                    (class
-                                        << (u8::BITS as u8 - bit_depth - (idx as u8 * bit_depth)))
-                                        | byte
-                                })
-                        })
-                        .collect::<Vec<u8>>(),
-                );
-                ret_vec
-            });
+    let mut img_data = vec![0_u8; bytes_per_scanline * dimension.1];
+    img_data
+        .chunks_mut(bytes_per_scanline)
+        .zip(data.scale(dimension).iter())
+        // build each scanline: filter type + packed pixel data
+        .for_each(|(scanline_dest, scanline_src)| {
+            let (scanline_dest_filter, scanline_dest_data) =
+                scanline_dest.split_at_mut(FILTER_TYPE.len());
 
-    /*
-    // build image block
+            // filter
+            scanline_dest_filter.copy_from_slice(FILTER_TYPE);
 
-    let scale = (
-        dimension.0 as f64 / data[0].len() as f64,
-        dimension.1 as f64 / data.len() as f64,
-    );
+            // packed data
+            scanline_dest_data
+                .iter_mut()
+                .zip(scanline_src.chunks(classes_per_byte))
+                // build 1 byte: pack each n pixels into 1 byte
+                .for_each(|(scanline_dest_elem, scanline_src_chunk)| {
+                    *scanline_dest_elem = scanline_src_chunk
+                        .iter()
+                        .map(|colorclass| (*colorclass).into())
+                        .enumerate()
+                        .fold(0_u8, |byte, (idx, class): (_, u8)| {
+                            (class << (u8::BITS as u8 - ((idx + 1) as u8 * bit_depth))) | byte
+                        });
+                });
+        });
 
-    let mut img_data = (0..dimension.1).map(|scanline| scanline as f64).fold(
-        Vec::<u8>::new(),
-        |mut ret_vec, scanline| {
-            ret_vec.extend_from_slice(FILTER_TYPE);
+    // form idat body from img_data, according to compression style
+    match is_compressed {
+        true => {
+            img_data = deflate::deflate_bytes_zlib(&img_data);
+        }
+        false => {
+            const CM: u8 = 8;
+            const CINFO: u8 = 7;
+            const COMPRESSION_METHOD: &[u8] = &[CINFO << 4 | CM];
+            const FCHECK: u8 = 1;
+            const FDICT: u8 = 0;
+            const FLEVEL: u8 = 0;
+            const FLG: &[u8] = &[FLEVEL << 6 | FDICT << 5 | FCHECK];
+            const IS_LAST_BLOCK: &[u8] = &[1];
 
-            ret_vec.append(
-                &mut (0..dimension.0)
-                    .collect::<Vec<u32>>()
-                    .as_slice()
-                    .chunks(sample_per_byte)
-                    .map(|x_chunk| {
-                        x_chunk
-                            .iter()
-                            // scale to new dimension
-                            .map(|x| *x as f64)
-                            .map(|pixel_i| {
-                                data[(scanline / scale.1) as usize][(pixel_i / scale.0) as usize]
-                            })
-                            // pack to a byte
-                            .map(|colorclass| colorclass as u8)
-                            .enumerate()
-                            .fold(0_u8, |byte, (i, class)| {
-                                (class << (u8::BITS as u8 - bit_depth - (i as u8 * bit_depth)))
-                                    | byte
-                            })
-                    })
-                    .collect::<Vec<u8>>(),
-            );
-            ret_vec
-        },
-    );
-     */
+            chunk_data.extend_from_slice(COMPRESSION_METHOD);
+            chunk_data.extend_from_slice(FLG);
+            chunk_data.extend_from_slice(IS_LAST_BLOCK);
 
-    let img_data_len: u16 = (img_data.len()) as u16;
-    chunk_data.extend_from_slice(&img_data_len.to_le_bytes());
-    chunk_data.extend_from_slice(&(!img_data_len).to_le_bytes());
+            let img_data_len: u16 = (img_data.len()) as u16;
+            chunk_data.extend_from_slice(&img_data_len.to_le_bytes());
+            chunk_data.extend_from_slice(&(!img_data_len).to_le_bytes());
 
-    img_data.extend_from_slice(&adler32(&img_data).to_be_bytes());
+            img_data.extend_from_slice(&adler32(&img_data).to_be_bytes());
+        }
+    }
+
     chunk_data.append(&mut img_data);
 
     pack_png_chunk(&mut chunk_data)
@@ -244,31 +222,45 @@ fn adler32(buf: &[u8]) -> u32 {
     b << 16 | a
 }
 
-fn base64(buf: &[u8]) -> Vec<u8> {
+pub fn base64(buf: &[u8]) -> Vec<u8> {
     const BASE64_TABLE: &[u8; 64] =
         b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     const BASE64_EMPTY: u8 = b'=';
 
-    buf.chunks(3).fold(Vec::<u8>::new(), |mut vec, bytes| {
-        let bits = u32::from_be_bytes([
-            0_u8,
-            *bytes.get(0).expect("base64"),
-            *bytes.get(1).unwrap_or(&0_u8),
-            *bytes.get(2).unwrap_or(&0_u8),
-        ]);
+    const SRC_BYTES_PER_UNIT: usize = 3;
+    const DEST_BYTES_PER_UNIT: usize = 4;
+    let ret_size =
+        ((buf.len().overflowing_sub(1).0 / SRC_BYTES_PER_UNIT) + 1) * DEST_BYTES_PER_UNIT;
 
-        vec.extend_from_slice(&[
-            BASE64_TABLE[(bits >> 18 & 0b111111_u32) as usize],
-            BASE64_TABLE[(bits >> 12 & 0b111111_u32) as usize],
-            match bytes.get(1).is_some() {
+    let mut base64_vec = vec![0_u8; ret_size];
+
+    base64_vec
+        .chunks_mut(DEST_BYTES_PER_UNIT)
+        .zip(buf.chunks(SRC_BYTES_PER_UNIT))
+        .for_each(|(bytes_dest, bytes_src)| {
+            // read bytes_src
+            let bytes_src_opt = [bytes_src.get(0), bytes_src.get(1), bytes_src.get(2)];
+
+            // ready source bits
+            let bits = u32::from_be_bytes([
+                0_u8,
+                *bytes_src_opt[0].expect("base64"),
+                *bytes_src_opt[1].unwrap_or(&0_u8),
+                *bytes_src_opt[2].unwrap_or(&0_u8),
+            ]);
+
+            // convert source bits to dest bits, then write
+            bytes_dest[0] = BASE64_TABLE[(bits >> 18 & 0b111111_u32) as usize];
+            bytes_dest[1] = BASE64_TABLE[(bits >> 12 & 0b111111_u32) as usize];
+            bytes_dest[2] = match bytes_src_opt[1].is_some() {
                 true => BASE64_TABLE[(bits >> 6 & 0b111111_u32) as usize],
                 false => BASE64_EMPTY,
-            },
-            match bytes.get(2).is_some() {
+            };
+            bytes_dest[3] = match bytes_src_opt[2].is_some() {
                 true => BASE64_TABLE[(bits & 0b111111_u32) as usize],
                 false => BASE64_EMPTY,
-            },
-        ]);
-        vec
-    })
+            };
+        });
+
+    base64_vec
 }

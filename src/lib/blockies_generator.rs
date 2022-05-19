@@ -1,4 +1,4 @@
-use crate::{ColorClass, RgbPixel};
+use crate::type_helper::{ColorClass, RgbPixel};
 
 /// Ethereum blockies generator, which stores necessary seeds for creating blockies
 pub struct BlockiesGenerator {

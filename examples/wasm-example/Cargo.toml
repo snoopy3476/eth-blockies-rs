@@ -1,17 +1,16 @@
 [package]
-name = "ethereum-blockies-generator-wasm"
-version = "0.1.0"
+name = "eth-blockies-rs-example-blockies-generator-wasm"
+version = "1.0.0"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-wasm-bindgen = "0.2.79"
-web-sys = { version = "0.3.4", features = [ 'Document', 'HtmlElement', 'HtmlInputElement', 'HtmlCollection', 'Window' ] }
-wee_alloc = "0.4.5"
+wasm-bindgen = "0.2.81"
+web-sys = { version = "0.3.4", features = [ 'Document', 'HtmlElement', 'HtmlInputElement', 'HtmlCollection', 'DomRect', 'DomTokenList', 'Window', 'console' ] }
 eth-blockies = { path = "../.." }
 
 [profile.release]
 lto = true
-opt-level = 'z'
+opt-level = 's'
