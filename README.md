@@ -75,7 +75,7 @@ use eth_blockies::*;
 
     assert_eq!(
         addr,
-        b"0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc"
+        "0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc"
     );
 
     // Ethereum address seed: canonicalized before use
@@ -191,6 +191,14 @@ window()
 
 
 ## Binary
+
+
+
+### Install
+
+```console
+$ cargo install eth-blockies
+```
 
 
 

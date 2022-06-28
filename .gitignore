@@ -1,4 +1,3 @@
 /target
 /rust-toolchain
 /examples/*/target
-/examples/wasm-example/gh-pages

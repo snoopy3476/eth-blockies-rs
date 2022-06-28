@@ -14,7 +14,7 @@ categories = [ "cryptography::cryptocurrencies",
                "wasm",
                "command-line-utilities" ]
 rust-version = "1.56"
-exclude = [ "benches", "examples" ]
+exclude = [ "asset", "benches", "examples" ]
 
 [dependencies]
 deflate = "1.0.0"
