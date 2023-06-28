@@ -1,0 +1,19 @@
+[package]
+name = "eth-blockies-rs-example-blockies-generator-wasm"
+version = "1.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2.87"
+web-sys = { version = "0.3.4", features = [ 'Document', 'HtmlElement', 'HtmlInputElement', 'HtmlSelectElement', 'HtmlCollection', 'DomRect', 'DomTokenList', 'Window', 'console' ] }
+getrandom = { version = "0.2.10", features = [ 'js' ] }
+tiny-keccak = { version = "2.0.2", features = [ 'keccak' ] }
+
+eth-blockies = { path = "../.." }
+
+[profile.release]
+lto = true
+opt-level = 's'

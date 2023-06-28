@@ -1,3 +1,12 @@
 /target
 /rust-toolchain
+
+# dir for local tmp files
+/tmp
+
+# examples gitignore
 /examples/*/target
+
+# test related files
+/tests/**/*.bin
+/tests/algorithm_validation/testcase

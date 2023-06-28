@@ -4,554 +4,939 @@
 //! Useful when getting raw RGB data of Ethereum-style blockies, as well as complete png image files.
 //!
 //!
+//! # Basic Usage
+//!
+//!
+//! 1. Define a blockies type (size) to use
+//!
+//!    * Make an alias type of [`Blockies`]
+//!    ```
+//!    use eth_blockies::{Blockies, BlockiesGenerator};
+//!  
+//!    // Blockies < size (const), T >
+//!    type Icon<T> = Blockies<15, T>;
+//!    ```
+//!   
+//!    * *Cf)* For Ethereum address blockies, [`EthBlockies`] is predefined as follows
+//!    ```
+//!    // use statement for Ethereum address blockies
+//!    use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
+//!    //   type 'EthBlockies<T>' is predefined as 'Blockies<8, T>'
+//!    ```   
+//! ---
+//!
+//!
+//! 2. Select an input seed type
+//!
+//!    * Check for [`SeedInput`] to get full list of input seed types
+//!    ```
+//!    # use eth_blockies::{Blockies, BlockiesGenerator};
+//!    #
+//!    # type Icon<T> = Blockies<15, T>;
+//!    #
+//!    // generate blockies from various input type
+//!    let from_string = Icon::data("eth-blockies".to_string());
+//!    let from_byte_vec = Icon::data(vec![0x0c, 0x93, 0xa3, 0x2e]);
+//!    ```
+//!   
+//!    * *Cf)* For Ethereum address seeds, apply [`to_ethaddr_seed()`](global_type_helper::SeedInput::to_ethaddr_seed) before passing as input seed
+//!    ```
+//!    # use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
+//!    #
+//!    // generate Ethereum address blockies from various input type
+//!
+//!    let seed_from_str = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+//!        .to_ethaddr_seed();
+//!    let from_str = EthBlockies::data(seed_from_str);
+//!
+//!    let seed_from_bytes = [
+//!          0xe6, 0x86, 0xc1, 0x4f, 0xf9, 0xc1, 0x10, 0x38, 0xf2, 0xb1,
+//!          0xc9, 0xad, 0x61, 0x7f, 0x23, 0x46, 0xcf, 0xb8, 0x17, 0xdc,
+//!        ].to_ethaddr_seed();
+//!    let from_bytes = EthBlockies::data(seed_from_bytes);
+//!    ```
+//! ---
+//!
+//!
+//! 3. Select an output data type
+//!
+//!    * Check for [`BlockiesGenerator`] to get full list of output data types
+//!    ```
+//!    # use eth_blockies::{Blockies, BlockiesGenerator};
+//!    #
+//!    # type Icon<T> = Blockies<15, T>;
+//!    #
+//!    # fn to_gray((r, g, b): (u8, u8, u8)) -> u8 {
+//!    #     (r as f64 * 0.299 + g as f64 * 0.587 + b as f64 * 0.114) as u8
+//!    # }
+//!    #
+//!    // generate blockies in various forms
+//!    let in_rgb_2d_arr = Icon::data("eth-blockies");
+//!    let in_indexed_2d_arr = Icon::indexed_data("eth-blockies");
+//!    let in_gray_2d_arr = Icon::data_mapped("eth-blockies", to_gray);
+//!    let in_png_data_vec = Icon::png_data("eth-blockies", (128, 128));
+//!    ```
+//!
+//!
 //! # Example
 //!
-//! * Get raw blockies data, from various seed types
-//!   * To generate a *standard* Ethereum blockies (commonly seen as icons of wallet addresses on other Ethereum platforms),
-//!     the input address seed **MUST** be canonicalized to `0x(hex_letters_lowercase)` using [`canonicalize_ethaddr`](type_helper::SeedString::canonicalize_ethaddr), as `addr` below.
-//! ```
-//! use eth_blockies::*;
+//! * Generate an Ethereum address blockies (with [`to_ethaddr_seed()`](global_type_helper::SeedInput::to_ethaddr_seed))
 //!
-//! // blockies from general string seed
-//! {
-//!     let seed = "eth-blockies-rs";
+//!   ```no_run
+//!   use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
 //!
-//!     // general string seed: used as it is
-//!     let blockies_data_from_string = eth_blockies_data(seed);
-//! }
+//!   let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+//!       .to_ethaddr_seed(); // required for Ethereum address blockies
 //!
-//! // blockies from general byte-array seed
-//! {
-//!     let seed: &[u8] = &[
-//!         0x0c, 0x93, 0xa3, 0x2e, 0xe5, 0x2b, 0xf6, 0x43,
-//!         0x66, 0xdb, 0xdc, 0xd7, 0xed, 0xde, 0x00, 0x78,
-//!     ];
+//!   // 8x8 2D-array of (r, g, b)
+//!   {
+//!       let eth_blockies_from_addr = EthBlockies::data(&seed);
+//!   }
 //!
-//!     // general byte-array seed: used as it is
-//!     let blockies_data_from_byte_arr = eth_blockies_data(seed);
-//! }
+//!   // uncompressed png data in byte vector
+//!   {
+//!       let eth_blockies_png_from_addr =
+//!           EthBlockies::png_data(&seed, (128, 128));
+//!           // use below for compressed png
+//!           // EthBlockies::compressed_png_data(&seed, (128, 128));
 //!
-//! // blockies from Ethereum address seed
-//! {
-//!     // "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
-//!     // -> "0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc"
-//!     let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
-//!         .canonicalize_ethaddr();
-//!
-//!     assert_eq!(
-//!         addr,
-//!         "0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc"
-//!     );
-//!
-//!     // Ethereum address seed: canonicalized before use
-//!     let blockies_data_from_eth_addr = eth_blockies_data(addr);
-//! }
-//! ```
-//!
-//! * Get raw blockies data, in various forms
-//! ```
-//! use eth_blockies::*;
-//!
-//! let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
-//!     .canonicalize_ethaddr();
-//!
-//!
-//! // get 2D array of (r, g, b)
-//! // dimension: 8 x 8 (nested-array of RgbPixel)
-//! {
-//!     let blockies_data_rgb = eth_blockies_data(&seed);
-//! }
-//!
-//!
-//! // get 1D array of (r, g, b)
-//! // dimension: 64 x 1 (array of RgbPixel)
-//! {
-//!     let blockies_data_rgb = eth_blockies_data(&seed).flatten();
-//! }
-//!
-//!
-//! // get 2D array of grayscale
-//! {
-//!     fn rgb_to_grayscale((r, g, b): RgbPixel) -> u8 {
-//!         (r as f64 * 0.299 + g as f64 * 0.587 + b as f64 * 0.114)
-//!             as u8
-//!     }
-//!
-//!     let blockies_data_grayscale =
-//!         eth_blockies_data_mapped(&seed, rgb_to_grayscale);
-//! }
-//!
-//!
-//! // get (color palette, 2D array of color indices for each pixel)
-//! {
-//!     let (color_palette, palette_idx_bitmap) =
-//!         eth_blockies_indexed_data(&seed);
-//!
-//!     assert_eq!(
-//!         color_palette[palette_idx_bitmap[0][0]],
-//!         (132, 222, 77)
-//!     );
-//! }
-//! ```
-//!
-//!
-//!
-//! * Write a generated blockies png data to file `test-raw.png`,
-//!   on general Rust binary/library target
-//! ```
-//! use eth_blockies::*;
-//!
-//! let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
-//!     .canonicalize_ethaddr();
-//! let dimension = (128, 128); // multiples of 8 recommended
-//! let compressed_output = true; // false for an uncompressed png
-//! let img_png_data =
-//!     eth_blockies_png_data(seed, dimension, compressed_output);
-//!
-//! // uncomment below to write to file
-//!
-//! //use std::io::Write;
-//! //std::fs::File::create("test-raw.png").unwrap()
-//! //    .write_all(&img_png_data);
-//! ```
-//!
+//!       // write data as png file
+//!       use std::io::Write;
+//!       std::fs::File::create("eth-blockies.png").unwrap()
+//!           .write_all(&eth_blockies_png_from_addr);
+//!   }
+//!   ```
 //!
 //!
 //! * Generate an html `img` blockies element, on wasm target
-//! ```ignore
-//! // addr to blockies data uri scheme,
-//! // which can be used directly in img elem 'src' or css 'url()'
-//! fn eth_blockies_data_uri_scheme(addr: &str) -> String {
-//!     use eth_blockies::*;
+//!   ```ignore
+//!   // addr to blockies data uri scheme,
+//!   // which can be used directly in img elem 'src' or css 'url()'
+//!   fn eth_blockies_data_uri(addr: &str) -> String {
+//!      use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
 //!
-//!     let addr_input = addr.canonicalize_ethaddr();
-//!     let dimension = (128, 128);
-//!     let compressed_output = true;
-//!     let data_uri_output = true;
+//!      let addr_input = addr.to_ethaddr_seed();
+//!      let output_dim = (128, 128);
+//!      let data_uri_output = true;
 //!
-//!     eth_blockies_png_data_base64(
-//!         addr_input,
-//!         dimension,
-//!         compressed_output,
-//!         data_uri_output
-//!     )
-//! }
+//!      EthBlockies::png_data_base64(
+//!         addr_input, output_dim, data_uri_output)
+//!   }
 //!
-//! use web_sys::*;
+//!   use web_sys::*;
 //!
-//! let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC";
+//!   let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC";
 //!
-//! window()
-//!     .and_then(|w| w.document())
-//!     .and_then(|doc| doc.body().zip(doc.create_element("img").ok()))
-//!     .and_then(|(body, img)| {
+//!   window()
+//!      .and_then(|w| w.document())
+//!      .and_then(|doc| doc.body().zip(doc.create_element("img").ok()))
+//!      .and_then(|(body, img)| {
 //!         // create a new img html element with generated data_uri
-//!         img.set_attribute("src", &eth_blockies_data_uri_scheme(addr))
-//!             // then attach to body
-//!             .and_then(|_| body.append_child(&img))
-//!             .ok()
-//!     });
-//! ```
+//!         img.set_attribute("src", &eth_blockies_data_uri(addr))
+//!            // then attach to body
+//!            .and_then(|_| body.append_child(&img))
+//!            .ok()
+//!      });
+//!   ```
+//!
+//!
+//! # Cargo Features
+//!
+//! * `compressed_png` (Enabled by default)
+//!   * This feature enables following functions:
+//!     * [`compressed_png_data()`](BlockiesGenerator::compressed_png_data)
+//!     * [`compressed_png_data_base64()`](BlockiesGenerator::compressed_png_data_base64)
+//!   * This feature adds a following external dependency:
+//!     * [`deflate`] crate
+//!   * If png compression is not needed,
+//!     disable this feature as follows when adding the crate:
+//!     * E.g.
+//!       * Shell: `cargo add eth-blockies@1.1 --no-default-features`
+//!       * Cargo.toml: `eth-blockies = { version = "1.1", default-features = false }`
 
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
-mod type_helper;
-pub use type_helper::*;
+mod blockies;
+pub use blockies::{Blockies, BlockiesHelper};
+mod global_type_helper;
+pub use global_type_helper::*;
 mod data_encoder;
-use data_encoder::{ansi_seq, indexed_png};
-mod blockies_generator;
-use blockies_generator::BlockiesGenerator;
+use data_encoder::*;
 
 extern crate alloc;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-/// Get Ethereum-style blockies data
+/// ( Alias of [`Blockies`]`<8, T>` ) Predefined [`Blockies`] for identicon of Ethereum address
+pub type EthBlockies<T> = Blockies<8, T>;
+
+/// Trait for generating a new [`Blockies`]
 ///
-/// # Arguments
-///
-/// * `seed` - Input seed
-///
-/// # Return
-///
-/// * Blockies RGB data, in the form of 2D [`RgbPixel`] array
-///
-/// # Example
-///
-/// * Get RGB blockies data
-/// ```
-/// use eth_blockies::*;
-/// let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
-///     .canonicalize_ethaddr();
-///
-/// // 2D array data
-/// let blockies_data_rgb = eth_blockies_data(seed);
-///
-/// const P: RgbPalette = [(38, 173, 52), (132, 222, 77), (4, 201, 40)];
-///
-/// assert_eq!(blockies_data_rgb, [
-///         [ P[1], P[1], P[1], P[1], P[1], P[1], P[1], P[1] ],
-///         [ P[1], P[0], P[0], P[2], P[2], P[0], P[0], P[1] ],
-///         [ P[2], P[1], P[1], P[0], P[0], P[1], P[1], P[2] ],
-///         [ P[0], P[0], P[2], P[0], P[0], P[2], P[0], P[0] ],
-///         [ P[1], P[0], P[1], P[2], P[2], P[1], P[0], P[1] ],
-///         [ P[1], P[2], P[1], P[2], P[2], P[1], P[2], P[1] ],
-///         [ P[0], P[2], P[1], P[2], P[2], P[1], P[2], P[0] ],
-///         [ P[1], P[0], P[0], P[1], P[1], P[0], P[0], P[1] ],
-///     ]);
-/// ```
-///
-#[allow(dead_code)]
-pub fn eth_blockies_data<S: SeedInput>(seed: S) -> EthBlockies<RgbPixel> {
-    eth_blockies_data_mapped(seed, |rgb_pixel| rgb_pixel)
+/// Used for generating data of a new blocky identicon in various form, including:
+/// * Raw blockies data
+/// * Terminal printable string (ANSI sequence)
+/// * Image file data (png)
+pub trait BlockiesGenerator<const S: usize> {
+    /// Generate an Ethereum-style blockies data
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - Input seed
+    ///
+    /// # Return
+    ///
+    /// * Blockies RGB data, in 2D [`RgbPixel`] array
+    ///
+    /// # Example
+    ///
+    /// * Generate RGB blockies data
+    ///
+    ///   * General identicon
+    ///   ```
+    ///   use eth_blockies::{Blockies, BlockiesGenerator};
+    ///   type Identicon<T> = Blockies<15, T>; // user-defined blockies type
+    ///
+    ///   // args
+    ///   let seed = "general string seed";
+    ///
+    ///   // generate blockies
+    ///   let icon_data_rgb = Blockies::<15>::data(seed);
+    ///   let icon_data_rgb_alias = Identicon::data(seed);
+    ///
+    ///   // test
+    ///   {
+    ///       assert_eq!(icon_data_rgb, icon_data_rgb_alias);
+    ///   }
+    ///   ```
+    ///
+    ///   * Ethereum blockies
+    ///   ```
+    ///   use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
+    ///
+    ///   // args
+    ///   let addr = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+    ///       .to_ethaddr_seed();
+    ///
+    ///   // generate blockies
+    ///   let blockies_data_rgb = EthBlockies::data(addr);
+    ///
+    ///   // test
+    ///   {
+    ///       const P: eth_blockies::RgbPalette =
+    ///           [(38, 173, 52), (132, 222, 77), (4, 201, 40)];
+    ///
+    ///       assert_eq!(blockies_data_rgb, [
+    ///               [ P[1], P[1], P[1], P[1], P[1], P[1], P[1], P[1] ],
+    ///               [ P[1], P[0], P[0], P[2], P[2], P[0], P[0], P[1] ],
+    ///               [ P[2], P[1], P[1], P[0], P[0], P[1], P[1], P[2] ],
+    ///               [ P[0], P[0], P[2], P[0], P[0], P[2], P[0], P[0] ],
+    ///               [ P[1], P[0], P[1], P[2], P[2], P[1], P[0], P[1] ],
+    ///               [ P[1], P[2], P[1], P[2], P[2], P[1], P[2], P[1] ],
+    ///               [ P[0], P[2], P[1], P[2], P[2], P[1], P[2], P[0] ],
+    ///               [ P[1], P[0], P[0], P[1], P[1], P[0], P[0], P[1] ],
+    ///           ]);
+    ///   }
+    ///   ```
+    ///
+    fn data<I: SeedInput>(seed: I) -> Blockies<S, RgbPixel>;
+
+    /// Generate an Ethereum-style blockies data, mapping each RGB color with `map_fn`
+    ///
+    /// Same with [`BlockiesGenerator::data`],  
+    /// except that each [`RgbPixel`] output is mapped
+    /// with the function `map_fn` \(element mapping function\)
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - Input seed
+    /// * `map_fn` - Mapping function for each [`RgbPixel`] element in the returned array
+    ///
+    /// # Return
+    ///
+    /// * Mapped blockies data, in 2D `T` array  
+    ///   (`T`: type of each element returned by `map_fn`)
+    ///
+    /// # Example
+    ///
+    /// * Generate grayscale blockies data
+    ///
+    ///   * General identicon
+    ///   ```
+    ///   use eth_blockies::{Blockies, BlockiesGenerator};
+    ///   type Identicon<T> = Blockies<19, T>; // user-defined blockies type
+    ///
+    ///   // args
+    ///   let seed = "general string seed";
+    ///   fn to_gray((r, g, b): (u8, u8, u8)) -> u8 {
+    ///       (r as f64 * 0.299 + g as f64 * 0.587 + b as f64 * 0.114) as u8
+    ///   }
+    ///  
+    ///   // generate blockies
+    ///   let icon_data_gray = Blockies::<19>::data_mapped(seed, to_gray);
+    ///   let icon_data_gray_alias = Identicon::data_mapped(seed, to_gray);
+    ///
+    ///   // test
+    ///   {
+    ///       assert_eq!(icon_data_gray, icon_data_gray_alias);
+    ///   }
+    ///   ```
+    ///
+    ///   * Ethereum blockies
+    ///   ```
+    ///   use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
+    ///
+    ///   // args
+    ///   let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+    ///       .to_ethaddr_seed();
+    ///   fn to_gray((r, g, b): (u8, u8, u8)) -> u8 {
+    ///       (r as f64 * 0.299 + g as f64 * 0.587 + b as f64 * 0.114) as u8
+    ///   }
+    ///
+    ///   // generate blockies
+    ///   let blockies_data_gray = EthBlockies::data_mapped(seed, to_gray);
+    ///
+    ///   // test
+    ///   {
+    ///       assert_eq!(blockies_data_gray, [
+    ///              [ 178, 178, 178, 178, 178, 178, 178, 178 ],
+    ///              [ 178, 118, 118, 123, 123, 118, 118, 178 ],
+    ///              [ 123, 178, 178, 118, 118, 178, 178, 123 ],
+    ///              [ 118, 118, 123, 118, 118, 123, 118, 118 ],
+    ///              [ 178, 118, 178, 123, 123, 178, 118, 178 ],
+    ///              [ 178, 123, 178, 123, 123, 178, 123, 178 ],
+    ///              [ 118, 123, 178, 123, 123, 178, 123, 118 ],
+    ///              [ 178, 118, 118, 178, 178, 118, 118, 178 ],
+    ///          ]);
+    ///   }
+    ///   ```
+    ///
+    fn data_mapped<I: SeedInput, T: Clone, F: Fn(RgbPixel) -> T>(
+        seed: I,
+        map_fn: F,
+    ) -> Blockies<S, T>;
+
+    /// Generate an Ethereum-style blockies data in indexed image format
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - Input seed
+    ///
+    /// # Return
+    ///
+    /// * A tuple of [(](tuple) `RgbPalette`, `Blockies<S, ColorClass>` [)](tuple)  
+    ///   * `RgbPalette`: Array of [`RgbPixel`]  
+    ///   * `Blockies<S, ColorClass>`: 2D array of palette indices
+    ///
+    /// # Example
+    ///
+    /// * Get RGB blockies data, composed of (RGB palette, palette indices for each element)
+    ///
+    ///   * General identicon
+    ///   ```
+    ///   use eth_blockies::{Blockies, BlockiesGenerator};
+    ///   type Identicon<T> = Blockies<6, T>; // user-defined blockies type
+    ///
+    ///   // args
+    ///   let seed = "general string seed";
+    ///
+    ///   // generate blockies
+    ///   let (rgb_palette, palette_idx_bitmap) =
+    ///       Blockies::<6>::indexed_data(seed);
+    ///   let (rgb_palette_alias, palette_idx_bitmap_alias) =
+    ///       Identicon::indexed_data(seed);
+    ///
+    ///   // test
+    ///   {
+    ///       assert_eq!(rgb_palette, rgb_palette_alias);
+    ///       assert_eq!(palette_idx_bitmap, palette_idx_bitmap_alias);
+    ///   }
+    ///   ```
+    ///
+    ///   * Ethereum blockies
+    ///   ```
+    ///   use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
+    ///
+    ///   // args
+    ///   let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+    ///       .to_ethaddr_seed();
+    ///
+    ///   // generate blockies
+    ///   let (palette, palette_idx_bitmap) =
+    ///       EthBlockies::indexed_data(seed);
+    ///
+    ///   // test
+    ///   {
+    ///       use eth_blockies::ColorClass;
+    ///
+    ///       // get (r, g, b) from palette
+    ///       assert_eq!(palette[ColorClass::BgColor], (38, 173, 52));
+    ///       assert_eq!(palette[ColorClass::Color], (132, 222, 77));
+    ///       assert_eq!(palette[ColorClass::SpotColor], (4, 201, 40));
+    ///
+    ///       // get color class from pixels
+    ///       assert_eq!(palette_idx_bitmap[0][0], ColorClass::Color);
+    ///       assert_eq!(palette_idx_bitmap[2][0], ColorClass::SpotColor);
+    ///       assert_eq!(palette_idx_bitmap[1][1], ColorClass::BgColor);
+    ///
+    ///       // get (r, g, b) from pixels
+    ///       assert_eq!(palette[palette_idx_bitmap[0][0]], (132, 222, 77));
+    ///       assert_eq!(palette[palette_idx_bitmap[2][0]], (4, 201, 40));
+    ///       assert_eq!(palette[palette_idx_bitmap[1][1]], (38, 173, 52));
+    ///   }
+    ///   ```
+    ///
+    fn indexed_data<I: SeedInput>(seed: I) -> (RgbPalette, Blockies<S, ColorClass>);
+
+    /// Generate an Ethereum-style blockies data in indexed image format, mapping each RGB palette color with `map_fn`
+    ///
+    /// Same with [`BlockiesGenerator::indexed_data`],  
+    /// except that each [`RgbPixel`] output in [`Palette`] is mapped
+    /// with the function `map_fn` \(element mapping function\)
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - Input seed
+    /// * `map_fn` - Mapping function for each [`RgbPixel`] element in the returned array
+    ///
+    /// # Return
+    ///
+    /// * A tuple of [(](tuple) `Palette<T>`, `Blockies<S, ColorClass>` [)](tuple)  
+    ///   * `Palette<T>`: Array of `T` returned by `map_fn`  
+    ///   * `Blockies<S, ColorClass>`: 2D array of palette indices
+    ///
+    /// # Example
+    ///
+    /// * Get grayscale blockies data, composed of (grayscale palette, palette indices for each element)
+    ///
+    ///   * General identicon
+    ///   ```
+    ///   use eth_blockies::{Blockies, BlockiesGenerator};
+    ///   type Identicon<T> = Blockies<6, T>; // user-defined blockies type
+    ///
+    ///   // args
+    ///   let seed = "general string seed";
+    ///   fn to_gray((r, g, b): (u8, u8, u8)) -> u8 {
+    ///       (r as f64 * 0.299 + g as f64 * 0.587 + b as f64 * 0.114) as u8
+    ///   }
+    ///  
+    ///   // generate blockies
+    ///   let (gray_palette, palette_idx_bitmap) =
+    ///       Blockies::<6>::indexed_data_mapped(seed, to_gray);
+    ///   let (gray_palette_alias, palette_idx_bitmap_alias) =
+    ///       Identicon::indexed_data_mapped(seed, to_gray);
+    ///
+    ///   // test
+    ///   {
+    ///       assert_eq!(gray_palette, gray_palette_alias);
+    ///       assert_eq!(palette_idx_bitmap, palette_idx_bitmap_alias);
+    ///   }
+    ///   ```
+    ///
+    ///   * Ethereum blockies
+    ///   ```
+    ///   use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
+    ///
+    ///   // args
+    ///   let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+    ///       .to_ethaddr_seed();
+    ///   fn to_gray((r, g, b): (u8, u8, u8)) -> u8 {
+    ///       (r as f64 * 0.299 + g as f64 * 0.587 + b as f64 * 0.114) as u8
+    ///   }
+    ///
+    ///   // generate blockies
+    ///   let (palette, palette_idx_bitmap) =
+    ///       EthBlockies::indexed_data_mapped(seed, to_gray);
+    ///
+    ///   // test
+    ///   {
+    ///       use eth_blockies::ColorClass;
+    ///
+    ///       // get grayscale value from palette
+    ///       assert_eq!(palette[ColorClass::BgColor], 118);
+    ///       assert_eq!(palette[ColorClass::Color], 178);
+    ///       assert_eq!(palette[ColorClass::SpotColor], 123);
+    ///
+    ///       // get color class from pixels
+    ///       assert_eq!(palette_idx_bitmap[0][0], ColorClass::Color);
+    ///       assert_eq!(palette_idx_bitmap[2][0], ColorClass::SpotColor);
+    ///       assert_eq!(palette_idx_bitmap[1][1], ColorClass::BgColor);
+    ///
+    ///       // get grayscale value from pixels
+    ///       assert_eq!(palette[palette_idx_bitmap[0][0]], 178);
+    ///       assert_eq!(palette[palette_idx_bitmap[2][0]], 123);
+    ///       assert_eq!(palette[palette_idx_bitmap[1][1]], 118);
+    ///   }
+    ///   ```
+    ///
+    fn indexed_data_mapped<I: SeedInput, T: Clone, F: Fn(RgbPixel) -> T>(
+        seed: I,
+        map_fn: F,
+    ) -> (Palette<T>, Blockies<S, ColorClass>);
+
+    /// Generate an Ethereum-style blockies data in ANSI sequence format (terminal-printable)
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - Input seed
+    /// * `output_dim` - (width, height) of output png binary data.
+    ///                  Multiples of `const S` ([`SIZE`](BlockiesHelper::SIZE)) recommended for both width and height.
+    /// * `is_utf8` - Determine whether to print using UTF-8 characters.
+    ///   * [`true`]: Output data contain UTF-8 characters,
+    ///     which makes blockies printed in compact size.
+    ///   * [`false`]: Output data do not contain any UTF-8 character,
+    ///     but its size is bigger as one unit block is represented as two spaces ('0x20').
+    ///
+    /// # Return
+    ///
+    /// * A vector of ANSI sequnce string. Each string in the vector represents each line.
+    ///
+    /// # Example
+    ///
+    /// * Get RGB blockies data in ANSI sequence for terminal output
+    ///
+    ///   * General identicon
+    ///   ```
+    ///   use eth_blockies::{Blockies, BlockiesGenerator};
+    ///   type Identicon<T> = Blockies<20, T>; // user-defined blockies type
+    ///
+    ///   // args
+    ///   let seed = "general string seed";
+    ///   let output_dim = (40, 40); // multiples of size recommended
+    ///   let is_utf8 = true; // if false, print in less-compact format
+    ///
+    ///   // generate blockies
+    ///   let icon_ansiseq_string_joined =
+    ///       Blockies::<20>::ansiseq_data(seed, output_dim, is_utf8)
+    ///       .join("\n");
+    ///   let icon_ansiseq_string_alias_joined =
+    ///       Identicon::ansiseq_data(seed, output_dim, is_utf8)
+    ///       .join("\n");
+    ///
+    ///   // test
+    ///   {
+    ///       assert_eq!(icon_ansiseq_string_joined,
+    ///                  icon_ansiseq_string_alias_joined);
+    ///
+    ///       println!("{}", icon_ansiseq_string_joined);
+    ///   }
+    ///   ```
+    ///
+    ///   * Ethereum blockies
+    ///   ```
+    ///   use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
+    ///
+    ///   // args
+    ///   let seed = "0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc"
+    ///       .to_ethaddr_seed();
+    ///   let output_dim = (8, 8); // multiples of size recommended
+    ///   let is_utf8 = true; // if false, print in less-compact format
+    ///
+    ///   // generate blockies
+    ///   let ansi_string_joined = EthBlockies::ansiseq_data(
+    ///       seed, output_dim, is_utf8).join("\n");
+    ///
+    ///   // print
+    ///   {
+    ///       println!("{}", ansi_string_joined);
+    ///
+    ///       // print to terminal in different manner
+    ///       // use std::io::Write;
+    ///       // writeln!(std::io::stdout(), "{}", ansi_string_joined);
+    ///   }
+    ///   ```
+    fn ansiseq_data<I: SeedInput>(
+        seed: I,
+        output_dim: (usize, usize),
+        is_utf8: bool,
+    ) -> Vec<String>;
+
+    /// Generate an Ethereum-style blockies data in uncompressed indexed png format
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - Input seed
+    /// * `output_dim` - (width, height) of output png binary data.
+    ///                  Multiples of `const S` ([`SIZE`](BlockiesHelper::SIZE)) recommended for both width and height.
+    ///
+    /// # Return
+    ///
+    /// * A byte vector of png binary data
+    ///
+    /// # Example
+    ///
+    /// * Get uncompressed png data of RGB blockies
+    ///
+    ///   * General identicon
+    ///   ```
+    ///   use eth_blockies::{Blockies, BlockiesGenerator};
+    ///   type Identicon<T> = Blockies<11, T>; // user-defined blockies type
+    ///
+    ///   // args
+    ///   let seed = "general string seed";
+    ///   let output_dim = (64, 64); // multiples of size recommended
+    ///
+    ///   // generate blockies
+    ///   let icon_png_data = Blockies::<11>::png_data(seed, output_dim);
+    ///   let icon_png_data_alias = Identicon::png_data(seed, output_dim);
+    ///
+    ///   // test
+    ///   {
+    ///       assert_eq!(icon_png_data, icon_png_data_alias);
+    ///
+    ///       // uncomment below to write to file
+    ///       // use std::io::Write;
+    ///       // std::fs::File::create("icon.png").unwrap()
+    ///       //     .write_all(&icon_png_data);
+    ///   }
+    ///   ```
+    ///
+    ///   * Ethereum blockies
+    ///   ```
+    ///   use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
+    ///
+    ///   // args
+    ///   let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+    ///       .to_ethaddr_seed();
+    ///   let output_dim = (16, 16); // multiples of size recommended
+    ///
+    ///   // generate blockies
+    ///   let img_png_data = EthBlockies::png_data(seed, output_dim);
+    ///
+    ///   // test
+    ///   {
+    ///       assert_eq!(img_png_data,
+    ///           b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\
+    ///             \x48\x44\x52\x00\x00\x00\x10\x00\x00\x00\x10\x02\x03\
+    ///             \x00\x00\x00\x62\x9d\x17\xf2\x00\x00\x00\x09\x50\x4c\
+    ///             \x54\x45\x26\xad\x34\x84\xde\x4d\x04\xc9\x28\xed\xf2\
+    ///             \x1a\xc2\x00\x00\x00\x5b\x49\x44\x41\x54\x78\x01\x01\
+    ///             \x50\x00\xaf\xff\x00\x55\x55\x55\x55\x00\x55\x55\x55\
+    ///             \x55\x00\x50\x0a\xa0\x05\x00\x50\x0a\xa0\x05\x00\xa5\
+    ///             \x50\x05\x5a\x00\xa5\x50\x05\x5a\x00\x00\xa0\x0a\x00\
+    ///             \x00\x00\xa0\x0a\x00\x00\x50\x5a\xa5\x05\x00\x50\x5a\
+    ///             \xa5\x05\x00\x5a\x5a\xa5\xa5\x00\x5a\x5a\xa5\xa5\x00\
+    ///             \x0a\x5a\xa5\xa0\x00\x0a\x5a\xa5\xa0\x00\x50\x05\x50\
+    ///             \x05\x00\x50\x05\x50\x05\x10\x15\x13\xed\x46\x70\x22\
+    ///             \x4a\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82");
+    ///
+    ///       // uncomment below to write to file
+    ///       // use std::io::Write;
+    ///       // std::fs::File::create("test.png").unwrap()
+    ///       //     .write_all(&img_png_data);
+    ///   }
+    ///   ```
+    fn png_data<I: SeedInput>(seed: I, output_dim: (usize, usize)) -> Vec<u8>;
+
+    /// Generate an Ethereum-style blockies data in compressed indexed png format
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - Input seed
+    /// * `output_dim` - (width, height) of output png binary data.
+    ///                  Multiples of `const S` ([`SIZE`](BlockiesHelper::SIZE)) recommended for both width and height.
+    ///
+    /// # Return
+    ///
+    /// * A byte vector of png binary data
+    ///
+    /// # Example
+    ///
+    /// * Get compressed png data of RGB blockies
+    ///
+    ///   * General identicon
+    ///   ```
+    ///   use eth_blockies::{Blockies, BlockiesGenerator};
+    ///   type Identicon<T> = Blockies<9, T>; // user-defined blockies type
+    ///
+    ///   // args
+    ///   let seed = "general string seed";
+    ///   let output_dim = (64, 64); // multiples of size recommended
+    ///
+    ///   // generate blockies
+    ///   let icon_compressed_png_data =
+    ///       Blockies::<9>::compressed_png_data(seed, output_dim);
+    ///   let icon_compressed_png_data_alias =
+    ///       Identicon::compressed_png_data(seed, output_dim);
+    ///
+    ///   // test
+    ///   {
+    ///       assert_eq!(icon_compressed_png_data,
+    ///                  icon_compressed_png_data_alias);
+    ///
+    ///       // uncomment below to write to file
+    ///       // use std::io::Write;
+    ///       // std::fs::File::create("icon.png").unwrap()
+    ///       //     .write_all(&icon_compressed_png_data);
+    ///   }
+    ///   ```
+    ///
+    ///   * Ethereum blockies
+    ///   ```
+    ///   use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
+    ///
+    ///   // args
+    ///   let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+    ///       .to_ethaddr_seed();
+    ///   let output_dim = (16, 16); // multiples of size recommended
+    ///
+    ///   // generate blockies
+    ///   let img_png_data =
+    ///       EthBlockies::compressed_png_data(seed, output_dim);
+    ///
+    ///   // print
+    ///   {
+    ///       // uncomment below to write to file
+    ///       // use std::io::Write;
+    ///       // std::fs::File::create("test.png").unwrap()
+    ///       //     .write_all(&img_png_data);
+    ///   }
+    ///   ```
+    #[cfg(feature = "compressed_png")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "compressed_png")))]
+    fn compressed_png_data<I: SeedInput>(seed: I, output_dim: (usize, usize)) -> Vec<u8>;
+
+    /// Generate an Ethereum-style blockies data in base64 format of uncompressed indexed png
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - Input seed
+    /// * `output_dim` - (width, height) of output png binary data.
+    ///                  Multiples of `const S` ([`SIZE`](BlockiesHelper::SIZE)) recommended for both width and height.
+    /// * `data_uri_output` - Determine if the result output is prefixed with data URI scheme
+    ///
+    /// # Return
+    ///
+    /// * A string of base64-encoded png data
+    ///
+    /// # Example
+    ///
+    /// * Get uncompressed png data of RGB blockies in base64 format
+    ///
+    ///   * General identicon
+    ///   ```
+    ///   use eth_blockies::{Blockies, BlockiesGenerator};
+    ///   type Identicon<T> = Blockies<7, T>; // user-defined blockies type
+    ///
+    ///   // args
+    ///   let seed = "general string seed";
+    ///   let output_dim = (64, 64); // multiples of size recommended
+    ///   let data_uri = false; // true: prepend "data:image/png;base64,"
+    ///
+    ///   // generate blockies
+    ///   let icon_png_data_base64_string =
+    ///       Blockies::<7>::png_data_base64(seed, output_dim, data_uri);
+    ///   let icon_png_data_base64_alias_string =
+    ///       Identicon::png_data_base64(seed, output_dim, data_uri);
+    ///
+    ///   // test
+    ///   {
+    ///       assert_eq!(icon_png_data_base64_string,
+    ///                  icon_png_data_base64_alias_string);
+    ///   }
+    ///   ```
+    ///
+    ///   * Ethereum blockies
+    ///   ```
+    ///   use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
+    ///
+    ///   // args
+    ///   let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+    ///       .to_ethaddr_seed();
+    ///   let output_dim = (16, 16); // multiples of size recommended
+    ///
+    ///   // generate blockies
+    ///   {
+    ///       // base64 data only
+    ///       let data_uri = false;
+    ///       let img_png_data_base64_string =
+    ///           EthBlockies::png_data_base64(&seed, output_dim, data_uri);
+    ///
+    ///       // test
+    ///       assert_eq!(img_png_data_base64_string,
+    ///           "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAgMAAABinRfyAAAACVBMVEU\
+    ///            mrTSE3k0EySjt8hrCAAAAW0lEQVR4AQFQAK//AFVVVVUAVVVVVQBQCq\
+    ///            AFAFAKoAUApVAFWgClUAVaAACgCgAAAKAKAABQWqUFAFBapQUAWlqlp\
+    ///            QBaWqWlAApapaAAClqloABQBVAFAFAFUAUQFRPtRnAiSgAAAABJRU5E\
+    ///            rkJggg==");
+    ///   }
+    ///   {
+    ///       // base64 data with data uri scheme prefix
+    ///       let data_uri = true;
+    ///       let img_png_data_base64_uri_scheme_string =
+    ///           EthBlockies::png_data_base64(&seed, output_dim, data_uri);
+    ///
+    ///       // test
+    ///       assert_eq!(img_png_data_base64_uri_scheme_string,
+    ///           "data:image/png;base64,\
+    ///            iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAgMAAABinRfyAAAACVBMVEU\
+    ///            mrTSE3k0EySjt8hrCAAAAW0lEQVR4AQFQAK//AFVVVVUAVVVVVQBQCq\
+    ///            AFAFAKoAUApVAFWgClUAVaAACgCgAAAKAKAABQWqUFAFBapQUAWlqlp\
+    ///            QBaWqWlAApapaAAClqloABQBVAFAFAFUAUQFRPtRnAiSgAAAABJRU5E\
+    ///            rkJggg==");
+    ///   }
+    ///   ```
+    fn png_data_base64<I: SeedInput>(
+        seed: I,
+        output_dim: (usize, usize),
+        data_uri_output: bool,
+    ) -> String;
+
+    /// Generate an Ethereum-style blockies data in base64 format of compressed indexed png
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - Input seed
+    /// * `output_dim` - (width, height) of output png binary data.
+    ///                  Multiples of `const S` ([`SIZE`](BlockiesHelper::SIZE)) recommended for both width and height.
+    /// * `data_uri_output` - Determine if the result output is prefixed with data URI scheme
+    ///
+    /// # Return
+    ///
+    /// * A string of base64-encoded png data
+    ///
+    /// # Example
+    ///
+    /// * Get compressed png data of RGB blockies in base64 format
+    ///
+    ///   * General identicon
+    ///   ```
+    ///   use eth_blockies::{Blockies, BlockiesGenerator};
+    ///   type Identicon<T> = Blockies<12, T>; // user-defined blockies type
+    ///
+    ///   // args
+    ///   let seed = "general string seed";
+    ///   let output_dim = (64, 64); // multiples of size recommended
+    ///   let data_uri = false; // true: prepend "data:image/png;base64,"
+    ///
+    ///   // generate blockies
+    ///   let icon_png_data_base64_string =
+    ///       Blockies::<12>::compressed_png_data_base64(
+    ///           seed, output_dim, data_uri);
+    ///   let icon_png_data_base64_alias_string =
+    ///       Identicon::compressed_png_data_base64(
+    ///           seed, output_dim, data_uri);
+    ///
+    ///   // test
+    ///   {
+    ///       assert_eq!(icon_png_data_base64_string,
+    ///                  icon_png_data_base64_alias_string);
+    ///   }
+    ///   ```
+    ///
+    ///   * Ethereum blockies
+    ///   ```
+    ///   use eth_blockies::{EthBlockies, SeedInput, BlockiesGenerator};
+    ///
+    ///   // args
+    ///   let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
+    ///       .to_ethaddr_seed();
+    ///   let output_dim = (16, 16); // multiples of size recommended
+    ///
+    ///   // generate blockies
+    ///   {
+    ///       // base64 data only
+    ///       let data_uri_output = false;
+    ///       let img_png_data_base64_string =
+    ///           EthBlockies::compressed_png_data_base64(
+    ///               &seed, output_dim, data_uri_output);
+    ///   }
+    ///   {
+    ///       // base64 data with data uri scheme prefix
+    ///       let data_uri_output = true;
+    ///       let img_png_data_base64_uri_scheme_string =
+    ///           EthBlockies::compressed_png_data_base64(
+    ///               &seed, output_dim, data_uri_output);
+    ///   }
+    ///   ```
+    #[cfg(feature = "compressed_png")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "compressed_png")))]
+    fn compressed_png_data_base64<I: SeedInput>(
+        seed: I,
+        output_dim: (usize, usize),
+        data_uri_output: bool,
+    ) -> String;
 }
 
-/// Get Ethereum-style blockies data in mapped format with `map_fn`
-///
-/// Same with [`eth_blockies_data`],  
-/// except that each [`RgbPixel`] output is mapped
-/// with the function `map_fn` \(element mapping function\)
-///
-/// # Arguments
-///
-/// * `seed` - Input seed
-/// * `map_fn` - Mapping function for each [`RgbPixel`] element in the returned array
-///
-/// # Return
-///
-/// * Mapped blockies data, in the form of 2D `T` array  
-///   (`T`: type of each element returned by `map_fn`)
-///
-/// # Example
-///
-/// * Get grayscale blockies data
-/// ```
-/// use eth_blockies::*;
-///
-/// fn rgb_to_grayscale((r, g, b): RgbPixel) -> u8 {
-///     (r as f64 * 0.299 + g as f64 * 0.587 + b as f64 * 0.114) as u8
-/// }
-///
-/// let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
-///     .canonicalize_ethaddr();
-/// let blockies_data_grayscale = eth_blockies_data_mapped(seed, rgb_to_grayscale);
-///
-/// assert_eq!(blockies_data_grayscale, [
-///        [ 178, 178, 178, 178, 178, 178, 178, 178 ],
-///        [ 178, 118, 118, 123, 123, 118, 118, 178 ],
-///        [ 123, 178, 178, 118, 118, 178, 178, 123 ],
-///        [ 118, 118, 123, 118, 118, 123, 118, 118 ],
-///        [ 178, 118, 178, 123, 123, 178, 118, 178 ],
-///        [ 178, 123, 178, 123, 123, 178, 123, 178 ],
-///        [ 118, 123, 178, 123, 123, 178, 123, 118 ],
-///        [ 178, 118, 118, 178, 178, 118, 118, 178 ],
-///    ]);
-/// ```
-///
-#[allow(dead_code)]
-pub fn eth_blockies_data_mapped<S: SeedInput, T: Clone, F: Fn(RgbPixel) -> T>(
-    seed: S,
-    map_fn: F,
-) -> EthBlockies<T> {
-    let (palette, class_bitmap) = eth_blockies_indexed_data_mapped(seed, map_fn);
+impl<const S: usize> BlockiesGenerator<S> for Blockies<S> {
+    fn data<I: SeedInput>(seed: I) -> Blockies<S, RgbPixel> {
+        Blockies::data_mapped(seed, |rgb_pixel| rgb_pixel)
+    }
 
-    class_bitmap.map_2d(|class, _| palette[class].clone())
-}
+    fn data_mapped<I: SeedInput, T: Clone, F: Fn(RgbPixel) -> T>(
+        seed: I,
+        map_fn: F,
+    ) -> Blockies<S, T> {
+        let (palette, class_bitmap) = Blockies::indexed_data_mapped(seed, map_fn);
 
-/// Get Ethereum-style blockies data in indexed image format
-///
-/// # Arguments
-///
-/// * `seed` - Input seed
-///
-/// # Return
-///
-/// * A tuple of [(](tuple) `RgbPalette`, `EthBlockies<ColorClass>` [)](tuple)  
-///   * `RgbPalette`: Array of [`RgbPixel`]  
-///   * `EthBlockies<ColorClass>`: 2D array of palette indices
-///
-/// # Example
-///
-/// * Get RGB blockies data, composed of RGB palette + palette indices for each element
-/// ```
-/// use eth_blockies::*;
-/// let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
-///     .canonicalize_ethaddr();
-/// let (color_palette, palette_idx_bitmap) = eth_blockies_indexed_data(seed);
-///
-///
-/// // get (r, g, b) from palette
-/// assert_eq!(color_palette[ColorClass::BgColor], (38, 173, 52));
-/// assert_eq!(color_palette[ColorClass::Color], (132, 222, 77));
-/// assert_eq!(color_palette[ColorClass::SpotColor], (4, 201, 40));
-///
-/// // get color class from pixels
-/// assert_eq!(palette_idx_bitmap[0][0], ColorClass::Color);
-/// assert_eq!(palette_idx_bitmap[2][0], ColorClass::SpotColor);
-/// assert_eq!(palette_idx_bitmap[1][1], ColorClass::BgColor);
-///
-/// // get (r, g, b) from pixels
-/// assert_eq!(color_palette[palette_idx_bitmap[0][0]], (132, 222, 77));
-/// assert_eq!(color_palette[palette_idx_bitmap[2][0]], (4, 201, 40));
-/// assert_eq!(color_palette[palette_idx_bitmap[1][1]], (38, 173, 52));
-/// ```
-///
-#[allow(dead_code)]
-pub fn eth_blockies_indexed_data<S: SeedInput>(seed: S) -> (RgbPalette, EthBlockies<ColorClass>) {
-    eth_blockies_indexed_data_mapped(seed, |rgb_pixel| rgb_pixel)
-}
+        class_bitmap.map_2d(|class, _| palette[class].clone())
+    }
 
-/// Get Ethereum-style blockies data in indexed image format with mapped palette (`map_fn`)
-///
-/// Same with [`eth_blockies_indexed_data`],  
-/// except that each [`RgbPixel`] output in [`Palette`] is mapped
-/// with the function `map_fn` \(element mapping function\)
-///
-/// # Arguments
-///
-/// * `seed` - Input seed
-/// * `map_fn` - Mapping function for each [`RgbPixel`] element in the returned array
-///
-/// # Return
-///
-/// * A tuple of [(](tuple) `Palette<T>`, `EthBlockies<ColorClass>` [)](tuple)  
-///   * `Palette<T>`: Array of `T` returned by `map_fn`  
-///   * `EthBlockies<ColorClass>`: 2D array of palette indices
-///
-/// # Example
-///
-/// * Get grayscale blockies data, composed of grayscale palette + palette indices for each element
-/// ```
-/// use eth_blockies::*;
-///
-/// fn rgb_to_grayscale((r, g, b): RgbPixel) -> u8 {
-///     (r as f64 * 0.299 + g as f64 * 0.587 + b as f64 * 0.114) as u8
-/// }
-///
-/// let seed = "0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC"
-///     .canonicalize_ethaddr();
-/// let (color_palette_grayscale, palette_idx_bitmap) =
-///     eth_blockies_indexed_data_mapped(seed, rgb_to_grayscale);
-///
-///
-/// // get (r, g, b) from palette
-/// assert_eq!(color_palette_grayscale[ColorClass::BgColor], 118);
-/// assert_eq!(color_palette_grayscale[ColorClass::Color], 178);
-/// assert_eq!(color_palette_grayscale[ColorClass::SpotColor], 123);
-///
-/// // get color class from pixels
-/// assert_eq!(palette_idx_bitmap[0][0], ColorClass::Color);
-/// assert_eq!(palette_idx_bitmap[2][0], ColorClass::SpotColor);
-/// assert_eq!(palette_idx_bitmap[1][1], ColorClass::BgColor);
-///
-/// // get (r, g, b) from pixels
-/// assert_eq!(color_palette_grayscale[palette_idx_bitmap[0][0]], 178);
-/// assert_eq!(color_palette_grayscale[palette_idx_bitmap[2][0]], 123);
-/// assert_eq!(color_palette_grayscale[palette_idx_bitmap[1][1]], 118);
-/// ```
-///
-#[allow(dead_code)]
-pub fn eth_blockies_indexed_data_mapped<S: SeedInput, T: Clone, F: Fn(RgbPixel) -> T>(
-    seed: S,
-    map_fn: F,
-) -> (Palette<T>, EthBlockies<ColorClass>) {
-    let mut keygen = BlockiesGenerator::new(seed.as_seed_bytes());
+    fn indexed_data<I: SeedInput>(seed: I) -> (RgbPalette, Blockies<S, ColorClass>) {
+        blockies::new_blockies(seed.as_seed_bytes())
+    }
 
-    // initialize palette
-    let palette = {
-        let (color, bgcolor, spotcolor) =
-            { (keygen.next_rgb(), keygen.next_rgb(), keygen.next_rgb()) };
-        [bgcolor, color, spotcolor].map(map_fn)
-    };
+    fn indexed_data_mapped<I: SeedInput, T: Clone, F: Fn(RgbPixel) -> T>(
+        seed: I,
+        map_fn: F,
+    ) -> (Palette<T>, Blockies<S, ColorClass>) {
+        let (rgb_palette, class_bitmap) = Blockies::indexed_data(seed.as_seed_bytes());
 
-    // initialize bitmap
-    let bitmap = EthBlockies::new(|(x, _)| match x < (EthBlockies::<T>::DIMENSION.0 + 1) / 2 {
-        true => keygen.next_colorclass(),
-        false => ColorClass::BgColor, // dummy: right half is not used
-    })
-    .map_2d_with_ref(|src_arr, (x, y)| {
-        // class
-        match x < (EthBlockies::<T>::DIMENSION.0 + 1) / 2 {
-            // left half: use itself
-            true => src_arr[y][x].clone(),
-            // right half: use corresponding flipped left half
-            false => src_arr[y][EthBlockies::<T>::DIMENSION.0 - 1 - x].clone(),
+        (rgb_palette.map(map_fn), class_bitmap)
+    }
+
+    fn ansiseq_data<I: SeedInput>(
+        seed: I,
+        output_dim: (usize, usize),
+        is_utf8: bool,
+    ) -> Vec<String> {
+        let (palette, bitmap) = Blockies::<S>::indexed_data(seed);
+        match is_utf8 {
+            true => ansi_seq::indexed_data_to_ansiseq_utf8(
+                palette,
+                bitmap.scale(output_dim),
+                output_dim,
+            ),
+            false => ansi_seq::indexed_data_to_ansiseq_ascii(
+                palette,
+                bitmap.scale(output_dim),
+                output_dim,
+            ),
         }
-    });
+    }
 
-    (palette, bitmap)
-}
+    fn png_data<I: SeedInput>(seed: I, output_dim: (usize, usize)) -> Vec<u8> {
+        let (palette, bitmap) = Blockies::<S>::indexed_data(seed);
+        indexed_png::indexed_data_to_png(palette, bitmap.scale(output_dim), output_dim, false)
+    }
 
-/// Get Ethereum-style blockies data in ANSI sequence format
-///
-/// # Arguments
-///
-/// * `seed` - Input seed
-/// * `dimension` - (width, height) of output png binary data.
-///                 Multiples of 8 recommended for both width and height.
-/// * `is_utf_8` - Determine whether to print using UTF-8 characters.
-///   * [`true`]: Output data contain UTF-8 characters,
-///     which makes blockies printed in compact size.
-///   * [`false`]: Output data do not contain any UTF-8 character,
-///     but its size is bigger as one unit block is represented as two spaces ('0x20').
-///
-/// # Return
-///
-/// * A vector of ANSI sequnce string. Each string in the vector represents each line.
-///
-/// # Example
-///
-/// * Get RGB blockies data in ANSI sequence for terminal output
-/// ```
-/// use eth_blockies::*;
-///
-/// let seed = "0xe686c14ff9c11038f2b1c9ad617f2346cfb817dc";
-/// let dimension = (8, 8);
-/// let is_utf8 = true; // if false, print in less-compact format (pure ascii)
-/// let ansi_string_data =
-///     eth_blockies_ansiseq_data(seed.canonicalize_ethaddr(), dimension, is_utf8)
-///         .join("\n");
-///
-/// println!("{}", ansi_string_data);
-///
-/// // use std::io::Write;
-/// // writeln!(std::io::stdout(), "{}", ansi_string_data);
-/// ```
-#[allow(dead_code)]
-pub fn eth_blockies_ansiseq_data<S: SeedInput>(
-    seed: S,
-    dimension: (usize, usize),
-    is_utf_8: bool,
-) -> Vec<String> {
-    match is_utf_8 {
-        true => ansi_seq::indexed_data_to_ansiseq_utf8(eth_blockies_indexed_data(seed), dimension),
-        false => {
-            ansi_seq::indexed_data_to_ansiseq_ascii(eth_blockies_indexed_data(seed), dimension)
-        }
+    #[cfg(feature = "compressed_png")]
+    fn compressed_png_data<I: SeedInput>(seed: I, output_dim: (usize, usize)) -> Vec<u8> {
+        let (palette, bitmap) = Blockies::<S>::indexed_data(seed);
+        indexed_png::indexed_data_to_png(palette, bitmap.scale(output_dim), output_dim, true)
+    }
+
+    fn png_data_base64<I: SeedInput>(
+        seed: I,
+        output_dim: (usize, usize),
+        data_uri_output: bool,
+    ) -> String {
+        indexed_png::base64_wrapper(&Blockies::<S>::png_data(seed, output_dim), data_uri_output)
+    }
+
+    #[cfg(feature = "compressed_png")]
+    fn compressed_png_data_base64<I: SeedInput>(
+        seed: I,
+        output_dim: (usize, usize),
+        data_uri_output: bool,
+    ) -> String {
+        indexed_png::base64_wrapper(
+            &Blockies::<S>::compressed_png_data(seed, output_dim),
+            data_uri_output,
+        )
     }
 }
 
-/// Get Ethereum-style blockies data in indexed png format
-///
-/// # Arguments
-///
-/// * `seed` - Input seed
-/// * `dimension` - (width, height) of output png binary data.
-///                 Multiples of 8 recommended for both width and height.
-/// * `compressed_output` - Determine if the result output png is compressed
-///
-/// # Return
-///
-/// * A byte vector of png binary data
-///
-/// # Example
-///
-/// * Get 16x16 uncompressed png data of RGB blockies
-/// ```
-/// use eth_blockies::*;
-///
-/// let seed = String::from("0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC")
-///     .canonicalize_ethaddr();
-/// let dimension = (16, 16); // multiples of 8 recommended
-/// let compressed_output = false; // true is recommended for normal use
-/// let img_png_data = eth_blockies_png_data(seed, dimension, compressed_output);
-///
-/// assert_eq!(img_png_data,
-///     b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\
-///       \x00\x00\x10\x00\x00\x00\x10\x02\x03\x00\x00\x00\x62\x9d\x17\xf2\x00\
-///       \x00\x00\x09\x50\x4c\x54\x45\x26\xad\x34\x84\xde\x4d\x04\xc9\x28\xed\
-///       \xf2\x1a\xc2\x00\x00\x00\x5b\x49\x44\x41\x54\x78\x01\x01\x50\x00\xaf\
-///       \xff\x00\x55\x55\x55\x55\x00\x55\x55\x55\x55\x00\x50\x0a\xa0\x05\x00\
-///       \x50\x0a\xa0\x05\x00\xa5\x50\x05\x5a\x00\xa5\x50\x05\x5a\x00\x00\xa0\
-///       \x0a\x00\x00\x00\xa0\x0a\x00\x00\x50\x5a\xa5\x05\x00\x50\x5a\xa5\x05\
-///       \x00\x5a\x5a\xa5\xa5\x00\x5a\x5a\xa5\xa5\x00\x0a\x5a\xa5\xa0\x00\x0a\
-///       \x5a\xa5\xa0\x00\x50\x05\x50\x05\x00\x50\x05\x50\x05\x10\x15\x13\xed\
-///       \x46\x70\x22\x4a\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82");
-///
-/// // uncomment below to write to file
-///
-/// // use std::io::Write;
-/// // std::fs::File::create("test.png").unwrap().write_all(&img_png_data);
-/// ```
-#[allow(dead_code)]
-pub fn eth_blockies_png_data<S: SeedInput>(
-    seed: S,
-    dimension: (usize, usize),
-    compressed_output: bool,
-) -> Vec<u8> {
-    indexed_png::indexed_data_to_png(
-        eth_blockies_indexed_data(seed),
-        dimension,
-        compressed_output,
-    )
-}
-
-/// Get Ethereum-style blockies data in base64 format of indexed png
-///
-/// # Arguments
-///
-/// * `seed` - Input seed
-/// * `dimension` - (width, height) of output png binary data.
-///                 Multiples of 8 recommended for both width and height.
-/// * `compressed_output` - Determine if the result output png is compressed
-/// * `data_uri_output` - Determine if the result output is prefixed with data URI scheme
-///
-/// # Return
-///
-/// * A string of base64-encoded png data
-///
-/// # Example
-///
-/// * Get 16x16 uncompressed png data of RGB blockies in base64 format
-/// ```
-/// use eth_blockies::*;
-///
-/// let seed = String::from("0xe686c14FF9C11038F2B1c9aD617F2346CFB817dC")
-///     .canonicalize_ethaddr();
-/// let dimension = (16, 16); // multiples of 8 recommended
-/// let compressed_output = false; // true is recommended for normal use
-///
-/// // base64 data only
-/// let img_png_data =
-///     eth_blockies_png_data_base64(&seed, dimension, compressed_output, false);
-///
-/// assert_eq!(img_png_data,
-///     "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAgMAAABinRfyAAAACVBMVEUmrTSE3k0EySjt8hrCAAAA\
-///      W0lEQVR4AQFQAK//AFVVVVUAVVVVVQBQCqAFAFAKoAUApVAFWgClUAVaAACgCgAAAKAKAABQWqUF\
-///      AFBapQUAWlqlpQBaWqWlAApapaAAClqloABQBVAFAFAFUAUQFRPtRnAiSgAAAABJRU5ErkJggg==");
-///
-/// // base64 data with data uri scheme prefix
-/// let img_png_data_uri_scheme =
-///     eth_blockies_png_data_base64(&seed, dimension, compressed_output, true);
-///
-/// assert_eq!(img_png_data_uri_scheme,
-///     "data:image/png;base64,\
-///      iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAgMAAABinRfyAAAACVBMVEUmrTSE3k0EySjt8hrCAAAA\
-///      W0lEQVR4AQFQAK//AFVVVVUAVVVVVQBQCqAFAFAKoAUApVAFWgClUAVaAACgCgAAAKAKAABQWqUF\
-///      AFBapQUAWlqlpQBaWqWlAApapaAAClqloABQBVAFAFAFUAUQFRPtRnAiSgAAAABJRU5ErkJggg==");
-///
-/// // uncomment below to write to file
-///
-/// // use std::io::Write;
-/// // let mut f = std::fs::File::create("test.png.base64").unwrap();
-/// // f.write_all(img_png_data.as_bytes());
-/// ```
-#[allow(dead_code)]
-pub fn eth_blockies_png_data_base64<S: SeedInput>(
-    seed: S,
-    dimension: (usize, usize),
-    compressed_output: bool,
-    data_uri_output: bool,
-) -> String {
-    String::from_utf8(
-        [
-            Vec::<u8>::from(match data_uri_output {
-                true => b"data:image/png;base64,".as_ref(),
-                false => b"".as_ref(),
-            }),
-            indexed_png::base64(&eth_blockies_png_data(seed, dimension, compressed_output)),
-        ]
-        .concat(),
-    )
-    .expect("unexpected internal error")
-}
+// deprecated functions from v1.0.0
+mod compat;
+pub use compat::*;

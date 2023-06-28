@@ -1,4 +1,4 @@
-use crate::type_helper::{BlockiesHelper, ColorClass, EthBlockies, Palette, RgbPalette, RgbPixel};
+use crate::global_type_helper::{ColorClass, Palette, RgbPalette, RgbPixel};
 use alloc::{string::String, vec, vec::Vec};
 
 const COLOR_RESET_BYTES: usize = 4;
@@ -15,20 +15,18 @@ type UnitBlockUnicode = [u8; BLOCK_BYTES_UNICODE];
 
 /// Convert indexed raw data to ansiseq ascii string
 pub fn indexed_data_to_ansiseq_ascii(
-    indexed_data: (RgbPalette, EthBlockies<ColorClass>),
+    indexed_palette: RgbPalette,
+    indexed_bitmap: Vec<Vec<ColorClass>>,
     dimension: (usize, usize),
 ) -> Vec<String> {
     const ASCII_BLOCK: &UnitBlockAscii = b"  ";
 
-    let (palette, bitmap) = indexed_data;
-
     // get palette sequence for each possible color
     let palette_sequence: Palette<[u8; COLOR_BLOCK_ASCII_BYTES]> =
-        palette.map(|palette_color| color_block_ascii(Some(palette_color), ASCII_BLOCK));
+        indexed_palette.map(|palette_color| color_block_ascii(Some(palette_color), ASCII_BLOCK));
 
     // get output for each line
-    bitmap
-        .scale(dimension)
+    indexed_bitmap
         .iter()
         .map(|row| {
             let blocks_part_bytes = COLOR_BLOCK_ASCII_BYTES * dimension.0;
@@ -44,16 +42,17 @@ pub fn indexed_data_to_ansiseq_ascii(
 
             row_arr_reset.copy_from_slice(&color_reset());
 
-            // String::from_utf8(row_arr).expect("unexpected internal error")
             // using unchecked ver, as built string is always valid ascii (utf8)
             unsafe { String::from_utf8_unchecked(row_arr) }
+            // String::from_utf8(row_arr).expect("unexpected internal error")
         })
         .collect()
 }
 
 /// Convert indexed raw data to ansiseq utf8 string
 pub fn indexed_data_to_ansiseq_utf8(
-    indexed_data: (RgbPalette, EthBlockies<ColorClass>),
+    indexed_palette: RgbPalette,
+    indexed_bitmap: Vec<Vec<ColorClass>>,
     dimension: (usize, usize),
 ) -> Vec<String> {
     const UTF8_BLOCK_LOWER: &UnitBlockUnicode = b"\xe2\x96\x84";
@@ -64,10 +63,9 @@ pub fn indexed_data_to_ansiseq_utf8(
     alloc::str::from_utf8(UTF8_BLOCK_UPPER).expect("unexpected internal error");
 
     // get palette sequence that is used when both upper/lower block parts exist in a line
-    let (palette, bitmap) = indexed_data;
     let palette_sequence: Palette<Palette<[u8; COLOR_BLOCK_UNICODE_BYTES]>> =
-        palette.map(|palette_color_upper| {
-            palette.map(|palette_color_lower| {
+        indexed_palette.map(|palette_color_upper| {
+            indexed_palette.map(|palette_color_lower| {
                 color_block_unicode(
                     Some(palette_color_lower),
                     Some(palette_color_upper),
@@ -77,13 +75,12 @@ pub fn indexed_data_to_ansiseq_utf8(
         });
     // get palette sequence that is used when only upper block parts exist in a line
     let palette_sequence_upperonly: Palette<[u8; COLOR_BLOCK_UNICODE_BYTES]> =
-        palette.map(|palette_color_upper| {
+        indexed_palette.map(|palette_color_upper| {
             color_block_unicode(Some(palette_color_upper), None, UTF8_BLOCK_UPPER)
         });
 
     // try chunk two lines, and output as one packed line
-    bitmap
-        .scale(dimension)
+    indexed_bitmap
         .chunks(2)
         .map(|row_chunks| {
             let blocks_part_bytes = COLOR_BLOCK_UNICODE_BYTES * dimension.0;
@@ -116,9 +113,9 @@ pub fn indexed_data_to_ansiseq_utf8(
 
             row_arr_reset.copy_from_slice(&color_reset());
 
-            // String::from_utf8(row_arr).expect("unexpected internal error")
             // using unchecked ver, as built string is always valid utf8
             unsafe { String::from_utf8_unchecked(row_arr) }
+            // String::from_utf8(row_arr).expect("unexpected internal error")
         })
         .collect()
 }

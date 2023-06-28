@@ -1,4 +1,5 @@
-use std::{collections::HashMap, env, io};
+use crate::bin_error::{BinError, BinResult};
+use std::{collections::HashMap, env};
 
 pub type OptList = HashMap<String, Option<String>>;
 pub type ArgList = Vec<String>;
@@ -13,10 +14,10 @@ pub trait CmdOpt {
         &mut self,
         opt_name: &str,
         need_opt_value: bool,
-    ) -> io::Result<(bool, Option<String>)>;
+    ) -> BinResult<(bool, Option<String>)>;
 
     // if unread argument exists, return error with invalid argument error msg
-    fn check_if_empty(&self) -> io::Result<()>;
+    fn check_if_empty(&self) -> BinResult<()>;
 }
 
 impl CmdOpt for OptList {
@@ -24,7 +25,7 @@ impl CmdOpt for OptList {
         &mut self,
         opt_name: &str,
         need_opt_value: bool,
-    ) -> io::Result<(bool, Option<String>)> {
+    ) -> BinResult<(bool, Option<String>)> {
         self.remove(opt_name) // pop as full opt name
             .or(opt_name.get(..1).and_then(|c| self.remove(c))) // pop as first char
             .map_or(
@@ -33,36 +34,33 @@ impl CmdOpt for OptList {
                 // if opt exists, set exist flag
                 |v| {
                     // check if value exists if needed, or does not exist if not needed
-                    (v.is_some() == need_opt_value)
-                        .then(|| (true, v))
-                        .ok_or(io::Error::new(
-                            io::ErrorKind::InvalidInput,
-                            format!(
-                                "Invalid argument: Argument '{}' {} option value!",
-                                opt_name,
-                                match need_opt_value {
-                                    true => "needs an",
-                                    false => "must not have any",
-                                }
-                            ),
-                        ))
+                    (v.is_some() == need_opt_value).then(|| (true, v)).ok_or(
+                        BinError::InvalidInput(format!(
+                            "Invalid argument: Argument '{}' {} option value!",
+                            opt_name,
+                            match need_opt_value {
+                                true => "needs an",
+                                false => "must not have any",
+                            }
+                        )),
+                    )
                 },
             )
     }
 
-    fn check_if_empty(&self) -> io::Result<()> {
+    fn check_if_empty(&self) -> BinResult<()> {
         match self.iter().next() {
-            Some(remaining_opt) => Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("Invalid option: '{}'", remaining_opt.0),
-            )),
+            Some(remaining_opt) => Err(BinError::InvalidInput(format!(
+                "Invalid option: '{}'",
+                remaining_opt.0
+            ))),
             _ => Ok(()),
         }
     }
 }
 
 // parse args iterator, and return tuple of (option list, normal arg list)
-pub fn parse_args() -> io::Result<(ArgList, OptList)> {
+pub fn parse_args() -> BinResult<(ArgList, OptList)> {
     let mut args = env::args();
     let _bin_name = args.next();
 
@@ -147,10 +145,10 @@ pub fn parse_args() -> io::Result<(ArgList, OptList)> {
                         // set current string as arg list, only if not in opt_mode
                         match opt_mode {
                             true => {
-                                last_opt_name.ok_or(io::Error::new(
-                                    io::ErrorKind::InvalidInput,
-                                    format!("Invalid argument: '{}'", fullstr),
-                                ))?;
+                                last_opt_name.ok_or(BinError::InvalidInput(format!(
+                                    "Invalid argument: '{}'",
+                                    fullstr
+                                )))?;
                             }
                             false => {
                                 list.0.push(fullstr.clone());

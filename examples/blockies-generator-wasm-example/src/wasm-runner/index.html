@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Eth-blockies-rs: Ethereum-style Blockies Generator</title>
+    <link type="text/css" rel="stylesheet" href="./style.css">
+    <link type="image/png" rel="icon" href="./favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <header id="description">
+      <h1>Ethereum-style Blockies Generator</h1>
+      <a class="project-link"
+         href="https://github.com/snoopy3476/eth-blockies-rs"
+         target="_blank">eth-blockies-rs</a>
+      <span> wasm demo in pure Rust</span>
+    </header>
+    <section>
+      <header>
+        <hr>
+        <h2>Generating a blocky identicon</h2>
+        Enter any string to generate your blocky identicon.<br>
+        For Ethereum wallet address,
+        check '<span class="wrapper-resol">ETH-addr</span>'.<br><br>
+      </header>
+      <main>
+        <input type="text" id="input-seed"
+               placeholder="Enter seed string (Ethereum address, etc.)"
+               pattern="(0[xX])?[0-9a-fA-F]{40}"
+               oninput="refresh_input_blockies();">
+        <input type="button" id="input-genseed-button"
+               value="Rand" onclick="gen_input_seed();">
+        <div>
+          <div class="wrapper-blockies-card">
+            <div class="wrapper-resol">
+              <p>
+                <input id="input-is-seed-ethaddr" type="checkbox"
+                       oninput="refresh_input_blockies();"><!--
+                --><label for="input-is-seed-ethaddr">&nbsp;ETH-addr</label>
+              </p>
+              <p>
+                <span>Resol:&nbsp;</span><!--
+                --><select id="select-resol" onchange="refresh_input_blockies();">
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8" selected="">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                  <option value="13">13</option>
+                  <option value="14">14</option>
+                  <option value="15">15</option>
+                  <option value="16">16</option>
+                </select>
+              </p>
+            </div>
+            <figure id="figure-blockies-card" class="blockies-card loading">
+              <div id="div-blockies-card-spinner">
+              </div>
+              <a name="blockies-img-link" target="_blank">
+                <img name="blockies-img">
+              </a>
+              <figcaption name="blockies-img-caption"></figcaption>
+            </figure>
+          </div>
+          <div id="div-wrapper-blockies-save">
+            <div id="div-wrapper-blockies-save-dim">
+              <span>Image Size: </span>
+              <input id="input-blockies-save-dim-width" type="text" value="128"
+                     placeholder="width" pattern="[0-9]*[1-9][0-9]*"
+                     oninput="refresh_input_blockies();">
+              <span>&times;</span>
+              <input id="input-blockies-save-dim-height" type="text" value="128"
+                     placeholder="height" pattern="[0-9]*[1-9][0-9]*"
+                     oninput="refresh_input_blockies();">
+            </div>
+            <div>
+              <input id="input-blockies-save-button" type="button"
+                     value="Save Blockies Image"
+                     onclick="prepare_save_blockies(); setTimeout(save_blockies, 1);">
+              <a id="a-blockies-save-trigger" style="display: none"></a>
+            </div>
+          </div>
+        </div>
+      </main>
+    </section>
+
+    <section>
+      <header>
+        <hr>
+        <h2>Application Examples</h2>
+        Example blockies of general strings and Ethereum wallet addresses.<br>
+        Click icons of valid Ethereum wallet addresses,<br>
+        to check the details at 'etherscan.io'.
+      </header>
+      <section id="section-blockies-examples">
+        <!-- generated dynamically with wasm -->
+      </section>
+    </section>
+    
+    <script type="text/javascript">
+      var save_blockies = null;
+      var prepare_ui_save_blockies = null;
+      var refresh_input_blockies = null;
+      
+      import("./eth_blockies_rs_example_blockies_generator_wasm.js")
+    .then(js => js.default()).then(w => {
+        save_blockies = w.save_blockies;
+        prepare_save_blockies = w.prepare_save_blockies;
+        refresh_input_blockies = w.refresh_input_blockies;
+        gen_input_seed = w.gen_input_seed;
+        
+        w.init_blockies();
+    });
+    </script>
+  </body>
+</html>

@@ -1,11 +1,13 @@
-use crate::type_helper::{BlockiesHelper, ColorClass, EthBlockies, RgbPalette, RgbPaletteHelper};
+use crate::global_type_helper::{ColorClass, RgbPalette, RgbPaletteHelper};
 
+use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
 // Convert indexed raw data to indexed png data
 pub fn indexed_data_to_png(
-    indexed_data: (RgbPalette, EthBlockies<ColorClass>),
+    indexed_palette: RgbPalette,
+    indexed_bitmap: Vec<Vec<ColorClass>>,
     dimension: (usize, usize),
     is_compressed: bool,
 ) -> Vec<u8> {
@@ -15,9 +17,9 @@ pub fn indexed_data_to_png(
     // build png
     let mut ret_data: Vec<u8> = Vec::from(PNG_HEADER);
     ret_data.append(&mut ihdr_chunk(dimension, BIT_DEPTH));
-    ret_data.append(&mut plte_chunk(indexed_data.0));
+    ret_data.append(&mut plte_chunk(indexed_palette));
     ret_data.append(&mut idat_chunk(
-        indexed_data.1,
+        indexed_bitmap,
         dimension,
         BIT_DEPTH,
         is_compressed,
@@ -62,7 +64,7 @@ fn plte_chunk(palette: RgbPalette) -> Vec<u8> {
 }
 
 fn idat_chunk(
-    data: EthBlockies<ColorClass>,
+    data: Vec<Vec<ColorClass>>,
     dimension: (usize, usize),
     bit_depth: u8,
     is_compressed: bool,
@@ -80,7 +82,7 @@ fn idat_chunk(
     let mut img_data = vec![0_u8; bytes_per_scanline * dimension.1];
     img_data
         .chunks_mut(bytes_per_scanline)
-        .zip(data.scale(dimension).iter())
+        .zip(data.iter())
         // build each scanline: filter type + packed pixel data
         .for_each(|(scanline_dest, scanline_src)| {
             let (scanline_dest_filter, scanline_dest_data) =
@@ -97,7 +99,8 @@ fn idat_chunk(
                 .for_each(|(scanline_dest_elem, scanline_src_chunk)| {
                     *scanline_dest_elem = scanline_src_chunk
                         .iter()
-                        .map(|colorclass| (*colorclass).into())
+                        .map(|colorclass| *colorclass as u8)
+                        //.map(|colorclass| (*colorclass).into())
                         .enumerate()
                         .fold(0_u8, |byte, (idx, class): (_, u8)| {
                             (class << (u8::BITS as u8 - ((idx + 1) as u8 * bit_depth))) | byte
@@ -108,7 +111,16 @@ fn idat_chunk(
     // form idat body from img_data, according to compression style
     match is_compressed {
         true => {
-            img_data = deflate::deflate_bytes_zlib(&img_data);
+            #[cfg(feature = "compressed_png")]
+            fn compress_png(input: &[u8]) -> Vec<u8> {
+                deflate::deflate_bytes_zlib(&input)
+            }
+            #[cfg(not(feature = "compressed_png"))]
+            fn compress_png(_input: &[u8]) -> Vec<u8> {
+                panic!("eth_blockies: Unexpected error: compressed_png is called when its feature is not enabled!");
+            }
+
+            img_data = compress_png(&img_data);
         }
         false => {
             const CM: u8 = 8;
@@ -222,7 +234,7 @@ fn adler32(buf: &[u8]) -> u32 {
     b << 16 | a
 }
 
-pub fn base64(buf: &[u8]) -> Vec<u8> {
+fn base64(buf: &[u8]) -> Vec<u8> {
     const BASE64_TABLE: &[u8; 64] =
         b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     const BASE64_EMPTY: u8 = b'=';
@@ -263,4 +275,18 @@ pub fn base64(buf: &[u8]) -> Vec<u8> {
         });
 
     base64_vec
+}
+
+pub fn base64_wrapper(buf: &[u8], data_uri_output: bool) -> String {
+    String::from_utf8(
+        [
+            Vec::<u8>::from(match data_uri_output {
+                true => b"data:image/png;base64,".as_ref(),
+                false => b"".as_ref(),
+            }),
+            base64(buf),
+        ]
+        .concat(),
+    )
+    .expect("unexpected internal error") // this should be never happened
 }

@@ -1,23 +1,23 @@
 [package]
 name = "eth-blockies"
-version = "1.0.0"
+version = "1.1.0"
 authors = [ "Kim Hwiwon <kim.hwiwon@outlook.com>" ]
 edition = "2021"
-description = "A pure Rust lightweight library/binary to get Ethereum blocky identicon raw data, which can be used for creating blockies icon images, printing to terminal, etc."
+description = "A pure Rust lightweight library/binary to get raw data of Ethereum-style blocky identicon, which can be used for generating blockies icon images, printing to terminal, etc."
 repository = "https://github.com/snoopy3476/eth-blockies-rs.git"
-documentation = "https://docs.rs/eth-blockies/1.0.0/"
+documentation = "https://docs.rs/eth-blockies/1.1.0/"
 license = "MIT"
-keywords = [ "ethereum", "blockies", "icon", "identicon" ]
+keywords = [ "ethereum", "blockies", "icon", "identicon", "cryptography" ]
 categories = [ "cryptography::cryptocurrencies",
                "multimedia::images",
                "no-std",
                "wasm",
                "command-line-utilities" ]
-rust-version = "1.56"
-exclude = [ "asset", "benches", "examples" ]
+rust-version = "1.63"
+exclude = [ "assets", "benches", "examples", "scripts", "target", "tests", "tmp" ]
 
-[dependencies]
-deflate = "1.0.0"
+
+# source
 
 [lib]
 path = "src/lib/lib.rs"
@@ -26,12 +26,30 @@ path = "src/lib/lib.rs"
 name = "eth-blockies"
 path = "src/bin/main.rs"
 
+
+# feature & dependency
+
+[features]
+default = [ "compressed_png" ]
+compressed_png = [ "dep:deflate" ]
+
+[dependencies]
+deflate = { version = "1.0.0", optional = true }
+
+
 # for bencher
 
 [dev-dependencies]
 bencher = "0.1.5"
 
 [[bench]]
-name = "benches"
+name = "bench"
 harness = false
 path = "benches/bench.rs"
+
+
+# docs.rs
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = [ "--cfg", "docsrs" ]

@@ -1,0 +1,273 @@
+use core::{
+    convert::TryFrom,
+    ops::{Index, IndexMut},
+};
+
+/// Unit color value
+type RgbElem = u8;
+/// Unit RGB pixel data
+///
+/// Represents [(](tuple) `Red`, `Green`, `Blue` [)](tuple), with a range of 0-255.
+pub type RgbPixel = (RgbElem, RgbElem, RgbElem);
+const RGBPIXEL_ELEM_COUNT: usize = 3;
+
+/// Type of colors in Ethereum-style blockies
+///
+/// Usually for indexing corresponding color in [`Palette`]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[repr(u8)]
+pub enum ColorClass {
+    /// 1st color in Ethereum-style blockies
+    BgColor = 0,
+    /// 2nd color in Ethereum-style blockies
+    Color = 1,
+    /// 3rd color in Ethereum-style blockies
+    SpotColor = 2,
+}
+const COLORCLASS_COUNT: usize = 3;
+
+impl TryFrom<u8> for ColorClass {
+    type Error = ();
+
+    fn try_from(raw_value: u8) -> Result<Self, Self::Error> {
+        match raw_value {
+            0 => Ok(ColorClass::BgColor),
+            1 => Ok(ColorClass::Color),
+            2 => Ok(ColorClass::SpotColor),
+            _ => Err(()),
+        }
+    }
+}
+
+impl Into<u8> for ColorClass {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
+impl Into<u8> for &ColorClass {
+    fn into(self) -> u8 {
+        (*self).into()
+    }
+}
+impl Into<u16> for ColorClass {
+    fn into(self) -> u16 {
+        self as u16
+    }
+}
+impl Into<u16> for &ColorClass {
+    fn into(self) -> u16 {
+        (*self).into()
+    }
+}
+impl Into<u32> for ColorClass {
+    fn into(self) -> u32 {
+        self as u32
+    }
+}
+impl Into<u32> for &ColorClass {
+    fn into(self) -> u32 {
+        (*self).into()
+    }
+}
+impl Into<u64> for ColorClass {
+    fn into(self) -> u64 {
+        self as u64
+    }
+}
+impl Into<u64> for &ColorClass {
+    fn into(self) -> u64 {
+        (*self).into()
+    }
+}
+impl Into<u128> for ColorClass {
+    fn into(self) -> u128 {
+        self as u128
+    }
+}
+impl Into<u128> for &ColorClass {
+    fn into(self) -> u128 {
+        (*self).into()
+    }
+}
+impl Into<usize> for ColorClass {
+    fn into(self) -> usize {
+        self as usize
+    }
+}
+impl Into<usize> for &ColorClass {
+    fn into(self) -> usize {
+        (*self).into()
+    }
+}
+
+impl Into<i16> for ColorClass {
+    fn into(self) -> i16 {
+        self as i16
+    }
+}
+impl Into<i16> for &ColorClass {
+    fn into(self) -> i16 {
+        (*self).into()
+    }
+}
+impl Into<i32> for ColorClass {
+    fn into(self) -> i32 {
+        self as i32
+    }
+}
+impl Into<i32> for &ColorClass {
+    fn into(self) -> i32 {
+        (*self).into()
+    }
+}
+impl Into<i64> for ColorClass {
+    fn into(self) -> i64 {
+        self as i64
+    }
+}
+impl Into<i64> for &ColorClass {
+    fn into(self) -> i64 {
+        (*self).into()
+    }
+}
+impl Into<i128> for ColorClass {
+    fn into(self) -> i128 {
+        self as i128
+    }
+}
+impl Into<i128> for &ColorClass {
+    fn into(self) -> i128 {
+        (*self).into()
+    }
+}
+impl Into<isize> for ColorClass {
+    fn into(self) -> isize {
+        self as isize
+    }
+}
+impl Into<isize> for &ColorClass {
+    fn into(self) -> isize {
+        (*self).into()
+    }
+}
+
+/// Array map of elements `T`, composing Ethereum-style blockies
+///
+/// Use [`ColorClass`] to index corresponding value.
+///
+/// # Generic Parameters
+///
+/// * `T` - Type of each element
+///
+/// # Example
+/// ```
+/// use eth_blockies::*;
+///
+/// let palette: Palette<u8> = [0, 127, 255];
+///
+/// assert_eq!(palette[ColorClass::BgColor], 0);
+/// assert_eq!(palette[ColorClass::Color], 127);
+/// assert_eq!(palette[ColorClass::SpotColor], 255);
+/// ```
+pub type Palette<T> = [T; COLORCLASS_COUNT];
+
+impl<T> Index<ColorClass> for Palette<T> {
+    type Output = T;
+    fn index(&self, colorclass: ColorClass) -> &Self::Output {
+        self.get(colorclass as usize).unwrap()
+    }
+}
+impl<T> IndexMut<ColorClass> for Palette<T> {
+    fn index_mut(&mut self, colorclass: ColorClass) -> &mut Self::Output {
+        self.get_mut(colorclass as usize).unwrap()
+    }
+}
+
+impl<T> Index<&ColorClass> for Palette<T> {
+    type Output = T;
+    fn index(&self, colorclass: &ColorClass) -> &Self::Output {
+        &self[*colorclass]
+    }
+}
+impl<T> IndexMut<&ColorClass> for Palette<T> {
+    fn index_mut(&mut self, colorclass: &ColorClass) -> &mut Self::Output {
+        &mut self[*colorclass]
+    }
+}
+
+/// ( Alias of [`Palette`]`<`[`RgbPixel`]`>` ) Array map of elements [`RgbPixel`], composing Ethereum-style blockies
+///
+/// Use [`ColorClass`] to index corresponding value.
+///
+/// # Example
+/// ```
+/// use eth_blockies::*;
+///
+/// let palette: RgbPalette = [(0, 0, 0), (63, 63, 63), (255, 255, 255)];
+///
+/// assert_eq!(palette[ColorClass::BgColor], (0, 0, 0));
+/// assert_eq!(palette[ColorClass::Color], (63, 63, 63));
+/// assert_eq!(palette[ColorClass::SpotColor], (255, 255, 255));
+/// ```
+pub type RgbPalette = Palette<RgbPixel>;
+
+#[doc(hidden)]
+/// Serialized Ethereum-style blockies palette data
+///
+/// This can be generated by performing [`serialize`](RgbPaletteHelper::serialize)
+/// on [`RgbPalette`] type.
+pub type SerialRgbPalette = [RgbElem; RGBPIXEL_ELEM_COUNT * COLORCLASS_COUNT];
+
+#[doc(hidden)]
+/// (Usually for internal use) Helper functions for [`RgbPalette`]
+pub trait RgbPaletteHelper {
+    /// Serialize to byte array
+    ///
+    /// Useful for palette header of png format (PLTE), etc.
+    ///
+    /// # Return
+    /// * Serialized byte array
+    ///
+    /// # Example
+    /// ```
+    /// use eth_blockies::*;
+    /// const COLORS: RgbPalette = [(38, 173, 52), (132, 222, 77), (4, 201, 40)];
+    ///
+    /// // serialize palette to byte array
+    /// let serial_palette: SerialRgbPalette = COLORS.serialize();
+    ///
+    /// assert_eq!(serial_palette, [38, 173, 52, 132, 222, 77, 4, 201, 40]);
+    /// ```
+    fn serialize(self) -> SerialRgbPalette;
+}
+impl RgbPaletteHelper for RgbPalette {
+    fn serialize(self) -> SerialRgbPalette {
+        /*
+        {
+            // initialize ret_arr using MaybeUninit
+            use core::mem::MaybeUninit;
+            let mut ret_arr_uninit: MaybeUninit<SerialRgbPalette> = MaybeUninit::uninit();
+            let ret_arr_ptr_casted: *mut RgbElem = ret_arr_uninit.as_mut_ptr().cast();
+
+            self.iter().enumerate().for_each(|(idx_row, row)| {
+                [row.0, row.1, row.2]
+                    .iter()
+                    .enumerate()
+                    .for_each(|(idx, elem)| unsafe {
+                        ret_arr_ptr_casted
+                            .add(idx_row * COLORCLASS_COUNT + idx)
+                            .write_unaligned(*elem)
+                    });
+            });
+
+            unsafe { ret_arr_uninit.assume_init() }
+        }
+         */
+
+        let s = self;
+
+        [
+            s[0].0, s[0].1, s[0].2, s[1].0, s[1].1, s[1].2, s[2].0, s[2].1, s[2].2,
+        ]
+    }
+}
