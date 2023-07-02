@@ -460,7 +460,7 @@ fn build_blockies(doc: &Document, is_seed_ethaddr: bool, resolution: usize) -> E
                         &[],
                         None,
                         &[
-                            new_elem(doc, "span", &[], Some("Resol: "), &[]),
+                            new_elem(doc, "span", &[], Some("Size: "), &[]),
                             new_elem(
                                 doc,
                                 "select",
@@ -610,7 +610,16 @@ fn new_elem(
 fn gen_select_options(doc: &Document, default: usize) -> Vec<Element> {
     const_generic_call_mapper::RESOLUTION_RANGE
         .map(|i| {
-            let i_bstr = [(i / 10) as u8 + b'0', (i % 10) as u8 + b'0'];
+            let i_bstr = [
+                {
+                    let upper_val = i / 10;
+                    match upper_val {
+                        0 => b' ',
+                        _ => upper_val as u8 + b'0',
+                    }
+                },
+                (i % 10) as u8 + b'0',
+            ];
             let val = String::from_utf8_lossy(&i_bstr);
             new_elem(
                 doc,
