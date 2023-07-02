@@ -46,6 +46,6 @@ It is OK to create testcase files manually according to the below format, but it
       
 - Examples (single line)
   - '*R8_eth.txt*': `0x7fcb209831f438a298789e7723af81e1f5c21da5 6c2242,de66e5,bfc2f0=01012022002002001222202220211120`  
-    ![algorithm-validation-tc-example-0.png](https://github.com/snoopy3476/eth-blockies-rs/blob/)
+    ![algorithm-validation-tc-example-0.png](https://github.com/snoopy3476/eth-blockies-rs/blob/55867c537aea5a7133d1eb216053b18494e42fd5/tests/algorithm_validation/assets/algorithm-validation-tc-example-0.png?raw=true)
   - '*R5.txt*': `VTNH49eu1IyoHbDbD8pGL 3ab37f,aec754,9c3051=001101101101220`  
-    ![algorithm-validation-tc-example-1.png](https://github.com/snoopy3476/eth-blockies-rs/blob/)
+    ![algorithm-validation-tc-example-1.png](https://github.com/snoopy3476/eth-blockies-rs/blob/55867c537aea5a7133d1eb216053b18494e42fd5/tests/algorithm_validation/assets/algorithm-validation-tc-example-1.png?raw=true)

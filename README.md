@@ -1,5 +1,5 @@
 # eth-blockies-rs
-![binary-example.png](https://github.com/snoopy3476/eth-blockies-rs/blob/b2f9fef9367d8df311f2e03bb9b719c243244096/asset/binary-example.png?raw=true)
+![binary-example.png](https://github.com/snoopy3476/eth-blockies-rs/blob/55867c537aea5a7133d1eb216053b18494e42fd5/assets/binary-example.jpg?raw=true)
 
 A lightweight library in pure Rust to get raw data of Ethereum-style blocky identicon,
 which can be used for generating blockies icon images, printing to terminal, etc.
@@ -12,7 +12,7 @@ Supports general Rust bin/lib, and WebAssembly (wasm) target.
 
 ## Live Demo
 
-![library-example.png](https://github.com/snoopy3476/eth-blockies-rs/blob/b2f9fef9367d8df311f2e03bb9b719c243244096/asset/library-example.png?raw=true)
+![library-example.png](https://github.com/snoopy3476/eth-blockies-rs/blob/55867c537aea5a7133d1eb216053b18494e42fd5/assets/library-example.png?raw=true)
 
 * Check for the [**wasm demo** (Ethereum-style Blockies Generator)](https://snoopy3476.github.io/eth-blockies-rs) to generate your custom blockies.
 
