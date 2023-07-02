@@ -451,7 +451,7 @@ fn build_blockies(doc: &Document, is_seed_ethaddr: bool, resolution: usize) -> E
                                 None,
                                 &[],
                             ),
-                            new_elem(doc, "label", &[], Some(" ETH-addr"), &[]),
+                            new_elem(doc, "label", &[], Some("ETH-addr"), &[]),
                         ],
                     ),
                     new_elem(
@@ -460,7 +460,7 @@ fn build_blockies(doc: &Document, is_seed_ethaddr: bool, resolution: usize) -> E
                         &[],
                         None,
                         &[
-                            new_elem(doc, "span", &[], Some("Size: "), &[]),
+                            new_elem(doc, "span", &[], Some("Size:"), &[]),
                             new_elem(
                                 doc,
                                 "select",

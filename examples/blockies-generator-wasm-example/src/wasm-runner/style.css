@@ -58,9 +58,16 @@ body {
 }
 .wrapper-resol > p {
     margin: 0.4em;
+    display: flex;
 }
 .wrapper-resol > p > * {
     align-self: center;
+}
+.wrapper-resol > p > label {
+    padding: 0 0 0 0.3em;
+}
+.wrapper-resol > p > span {
+    padding: 0 0.3em;
 }
 
 /* blockies card object */
