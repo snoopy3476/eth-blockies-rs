@@ -1,7 +1,7 @@
 <!doctype html><title>Eth-blockies-rs: Ethereum-style Blockies Generator</title><link rel=stylesheet href=./style.css><link type=image/png rel=icon href=./favicon.png><meta name=viewport content="width=device-width,initial-scale=1"><header id=description><h1>Ethereum-style Blockies Generator</h1><a class=project-link href=https://github.com/snoopy3476/eth-blockies-rs target=_blank>eth-blockies-rs</a>
 <span>wasm demo in pure Rust</span></header><section><header><hr><h2>Generating a blocky identicon</h2>Enter any string to generate your blocky identicon.<br>For Ethereum wallet address,
 check '<span class=wrapper-resol>ETH-addr</span>'.<br><br></header><main><input id=input-seed placeholder="Enter seed string (Ethereum address, etc.)" pattern=(0[xX])?[0-9a-fA-F]{40} oninput=refresh_input_blockies();>
-<input type=button id=input-genseed-button value=Rand onclick=gen_input_seed();><div><div class=wrapper-blockies-card><div class=wrapper-resol><p><input id=input-is-seed-ethaddr type=checkbox oninput=refresh_input_blockies();><label for=input-is-seed-ethaddr>&nbsp;ETH-addr</label><p><span>Size:&nbsp;</span><select id=select-resol onchange=refresh_input_blockies();>
+<input type=button id=input-genseed-button value=Rand onclick=gen_input_seed();><div><div class=wrapper-blockies-card><div class=wrapper-resol><p><input id=input-is-seed-ethaddr type=checkbox oninput=refresh_input_blockies();><label for=input-is-seed-ethaddr>ETH-addr</label><p><span>Size:</span><select id=select-resol onchange=refresh_input_blockies();>
 <option value=5>5
 <option value=6>6
 <option value=7>7
